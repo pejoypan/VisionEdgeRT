@@ -6,12 +6,12 @@
 #include "../utils/timer.h"
 #include "../utils/types.h"
 
-using namespace HPMVA;
+using namespace vert;
 using namespace std;
 using namespace Pylon;
 using namespace Basler_UniversalCameraParams;
 
-HPMVA::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
+vert::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
 {
     publisher_ = zmq::socket_t(*ctx, zmq::socket_type::pub);
     publisher_.bind("inproc://#1");
@@ -22,22 +22,22 @@ HPMVA::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
 
 }
 
-HPMVA::BaslerEmulator::~BaslerEmulator()
+vert::BaslerEmulator::~BaslerEmulator()
 {
     close();
 }
 
-bool HPMVA::BaslerEmulator::is_open() const
+bool vert::BaslerEmulator::is_open() const
 {
     return camera_.IsOpen();
 }
 
-bool HPMVA::BaslerEmulator::is_grabbing() const
+bool vert::BaslerEmulator::is_grabbing() const
 {
     return camera_.IsGrabbing();
 }
 
-void HPMVA::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
+void vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
 {
     // TODO: mutex ?
     try {
@@ -48,7 +48,7 @@ void HPMVA::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
         // DON'T open camera before register
         
         // TODO: what if real camera exists?
-        HPMVA::register_default_events(camera_);
+        vert::register_default_events(camera_);
         
         // Disable standard test images
         camera_.TestImageSelector.SetValue(TestImageSelector_Off);
@@ -63,7 +63,7 @@ void HPMVA::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
     }
 }
 
-void HPMVA::BaslerEmulator::close()
+void vert::BaslerEmulator::close()
 {
     // TODO: mutex?
     stop();
@@ -73,31 +73,31 @@ void HPMVA::BaslerEmulator::close()
     // TODO: deregister events?
 }
 
-void HPMVA::BaslerEmulator::start()
+void vert::BaslerEmulator::start()
 {
     timer_.start();
     camera_.StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
     
 }
 
-void HPMVA::BaslerEmulator::start(int max_images)
+void vert::BaslerEmulator::start(int max_images)
 {
     timer_.start();
     camera_.StartGrabbing(max_images, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
 }
 
-void HPMVA::BaslerEmulator::stop()
+void vert::BaslerEmulator::stop()
 {
     camera_.StopGrabbing();
     timer_.elapsed();
 }
 
-bool HPMVA::BaslerEmulator::set_image_filename(std::string_view filename)
+bool vert::BaslerEmulator::set_image_filename(std::string_view filename)
 {
-    return HPMVA::set_image_filename(camera_, filename);
+    return vert::set_image_filename(camera_, filename);
 }
 
-bool HPMVA::BaslerEmulator::set_fps(double fps)
+bool vert::BaslerEmulator::set_fps(double fps)
 {
     if (camera_.AcquisitionFrameRateEnable.TrySetValue(true)) {
         camera_.AcquisitionFrameRate.SetValue(fps);
@@ -106,12 +106,12 @@ bool HPMVA::BaslerEmulator::set_fps(double fps)
     return true;
 }
 
-bool HPMVA::BaslerEmulator::set_pixel_format(std::string_view format)
+bool vert::BaslerEmulator::set_pixel_format(std::string_view format)
 {
-    return HPMVA::set_pixel_format(camera_, format);
+    return vert::set_pixel_format(camera_, format);
 }
 
-void HPMVA::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptrGrabResult)
+void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptrGrabResult)
 {
 
     // Send meta

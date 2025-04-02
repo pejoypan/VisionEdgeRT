@@ -6,7 +6,7 @@
 #include "../third_party/zmq.hpp"
 #include "../utils/timer.h"
 
-namespace HPMVA {
+namespace vert {
 
     class BaslerEmulator : public Pylon::CImageEventHandler
     {
@@ -40,7 +40,7 @@ namespace HPMVA {
 
     };
 
-} // namespace HPMVA
+} // namespace vert
 
     
 #endif /* _BASLER_EMULATOR_H_ */

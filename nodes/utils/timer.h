@@ -5,9 +5,9 @@
 #include <chrono>
 #include <iostream>
 
-namespace HPMVA
+namespace vert
 {
-#ifdef HPMVA_DISABLE_TIMING
+#ifdef VERT_DISABLE_TIMING
 class SimpleTimer
 {
 /*
@@ -31,7 +31,7 @@ public:
 #define TIMEIT(name) void(0);
 #define FUNC_TIMER() void(0);
 
-#else // HPMVA_DISABLE_TIMING
+#else // VERT_DISABLE_TIMING
 class SimpleTimer
 {
 /*
@@ -82,10 +82,10 @@ private:
     std::chrono::duration<double, std::milli> total_duration_;
 };
 
-#define TIMEIT(name) HPMVA::SimpleTimer __t(name);
-#define FUNC_TIMER() HPMVA::SimpleTimer __t(__func__);
+#define TIMEIT(name) vert::SimpleTimer __t(name);
+#define FUNC_TIMER() vert::SimpleTimer __t(__func__);
 
-#endif // HPMVA_DISABLE_TIMING
+#endif // VERT_DISABLE_TIMING
 
 }
 

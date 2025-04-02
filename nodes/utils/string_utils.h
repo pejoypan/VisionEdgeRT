@@ -5,7 +5,7 @@
 #include <string_view>
 #include <algorithm>
 
-namespace HPMVA
+namespace vert
 {
     inline std::string to_lower(std::string_view s) {
         std::string result(s);
@@ -13,7 +13,7 @@ namespace HPMVA
             [](unsigned char c){ return std::tolower(c); });
         return result;
     }
-} // namespace HPMVA
+} // namespace vert
 
 
 #endif /* _STRING_UTILS_H_ */

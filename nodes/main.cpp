@@ -35,9 +35,9 @@ void subscriber_thread(zmq::context_t *ctx)
         assert(result && "recv failed");
         assert(*result == 2);
 
-        auto [h, w, type, timestamp] = msgpack::unpack<HPMVA::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
+        auto [h, w, type, timestamp] = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
 
-        frame = cv::Mat(h, w, HPMVA::pixel_type_to_cv_type(type), msgs[1].data());
+        frame = cv::Mat(h, w, vert::pixel_type_to_cv_type(type), msgs[1].data());
 
         cv::imshow("Received", frame);
         cv::waitKey(1);
@@ -70,7 +70,7 @@ int main(int argc, char* argv[])
     Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
     
     zmq::context_t context(0);
-    HPMVA::BaslerEmulator camera(&context);
+    vert::BaslerEmulator camera(&context);
 
     Pylon::CDeviceInfo devInfo;
     camera.open(devInfo);

@@ -1,16 +1,16 @@
 cmake_minimum_required(VERSION 3.12)
-project(HPMVA VERSION 0.0.1 LANGUAGES CXX)
+project(VisionEdgeRT VERSION 0.0.1 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
-set(CMAKE_INSTALL_PREFIX "C:/hpmva" CACHE PATH "Default install prefix" FORCE)
+set(CMAKE_INSTALL_PREFIX "C:/VisionEdgeRT" CACHE PATH "Default install prefix" FORCE)
 
-option(HPMVA_DISABLE_TIMING "Disable Timing" OFF)
-if (HPMVA_DISABLE_TIMING)
-    message(STATUS "HPMVA: Timing is disabled")
-    add_compile_definitions(HPMVA_DISABLE_TIMING)
+option(VisionEdgeRT_DISABLE_TIMING "Disable Timing" OFF)
+if (VERT_DISABLE_TIMING)
+    message(STATUS "VisionEdgeRT: Timing is disabled")
+    add_compile_definitions(VERT_DISABLE_TIMING)
 endif()
 
 if (WIN32)

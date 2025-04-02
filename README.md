@@ -13,7 +13,7 @@ cmake --build . --config release
 
 | 功能     | 参数                 |
 | -------- | -------------------- |
-| 禁用计时 | HPMVA_DISABLE_TIMING |
+| 禁用计时 | VERT_DISABLE_TIMING |
 |          |                      |
 |          |                      |
 

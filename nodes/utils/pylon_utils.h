@@ -14,7 +14,7 @@
 #include <opencv2/core.hpp>
 #include "string_utils.h"
 
-namespace HPMVA
+namespace vert
 {
     enum CameraEventsEnum {
         ExposureEnd = 1, // used
@@ -176,7 +176,7 @@ namespace Pylon
 
             switch (userProvidedId)
             {
-            case HPMVA::CameraEventsEnum::ExposureEnd:
+            case vert::CameraEventsEnum::ExposureEnd:
                 if (camera.EventExposureEndFrameID.IsReadable()) {  // Applies to cameras based on SFNC 2.0 or later, e.g, USB cameras
                     std::cout << "Exposure End event. FrameID: " << camera.EventExposureEndFrameID.GetValue() << " Timestamp: " << camera.EventExposureEndTimestamp.GetValue() << std::endl;
                 } else {
@@ -184,7 +184,7 @@ namespace Pylon
                 }
                 break;
             
-            case HPMVA::CameraEventsEnum::FrameStart:
+            case vert::CameraEventsEnum::FrameStart:
                 if (camera.EventFrameStartFrameID.IsReadable()) {  // Applies to cameras based on SFNC 2.0 or later, e.g, USB cameras
                     std::cout << "Frame Start event. FrameID: " << camera.EventFrameStartFrameID.GetValue() << " Timestamp: " << camera.EventFrameStartTimestamp.GetValue() << std::endl;
                 }
@@ -199,7 +199,7 @@ namespace Pylon
 
 } // namespace Pylon
 
-namespace HPMVA
+namespace vert
 {
     inline int pixel_type_to_cv_type(int pixel_type) {
         switch (pixel_type) {
@@ -275,7 +275,7 @@ namespace HPMVA
             camera.Open();
         }
 
-        std::cout << HPMVA::get_camera_info(camera) << std::endl;
+        std::cout << vert::get_camera_info(camera) << std::endl;
 
         // Check if the device supports events.
         if (!camera.EventSelector.IsWritable()) {
@@ -292,8 +292,8 @@ namespace HPMVA
                 FrameStartName = "FrameStartEvent";
             }
             
-            camera.RegisterCameraEventHandler( new Pylon::CameraEvents, ExposureEndName.c_str(), HPMVA::CameraEventsEnum::ExposureEnd, Pylon::RegistrationMode_Append, Pylon::Cleanup_Delete );
-            camera.RegisterCameraEventHandler( new Pylon::CameraEvents, FrameStartName.c_str(), HPMVA::CameraEventsEnum::FrameStart, Pylon::RegistrationMode_Append, Pylon::Cleanup_Delete );
+            camera.RegisterCameraEventHandler( new Pylon::CameraEvents, ExposureEndName.c_str(), vert::CameraEventsEnum::ExposureEnd, Pylon::RegistrationMode_Append, Pylon::Cleanup_Delete );
+            camera.RegisterCameraEventHandler( new Pylon::CameraEvents, FrameStartName.c_str(), vert::CameraEventsEnum::FrameStart, Pylon::RegistrationMode_Append, Pylon::Cleanup_Delete );
     
             if (camera.EventSelector.TrySetValue(Basler_UniversalCameraParams::EventSelector_ExposureEnd)) {
                 camera.EventNotification.TrySetValue(Basler_UniversalCameraParams::EventNotification_On);
@@ -358,7 +358,7 @@ namespace HPMVA
         return true;
     }
 
-} // namespace HPMVA
+} // namespace vert
 
 
 

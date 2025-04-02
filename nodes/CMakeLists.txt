@@ -5,13 +5,13 @@ add_subdirectory(basler_emulator)
 add_subdirectory(image_writer)
 add_subdirectory(io)
 
-add_executable(hpmva main.cpp)
+add_executable(VERT main.cpp)
 
-target_link_libraries(hpmva PRIVATE
+target_link_libraries(VERT PRIVATE
     basler_emulator
     pylon::pylon
     libzmq
     ${OpenCV_LIBS})
 
-install(TARGETS hpmva
+install(TARGETS VERT
         RUNTIME DESTINATION bin)
