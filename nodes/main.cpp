@@ -3,6 +3,7 @@
 #include "third_party/zmq.hpp"
 #include "third_party/cxxopts.hpp"
 #include "basler_emulator.h"
+#include "camera.h"
 
 // test
 #include <thread>
@@ -102,15 +103,16 @@ int main(int argc, char* argv[])
         max_images = result["max"].as<int>();
     } 
 
-    auto test_thread = std::async(std::launch::async, subscriber_thread, &context);
-    
+    vert::Camera camera_thread(&context, camera.get_pixel_format());
+    camera_thread.start();
+
     max_images > 0 ? camera.start(max_images) : camera.start();
 
-    // test_thread.wait();
 
     cout << "Press Enter to stop grabbing..." << endl;
     cin.get();
     camera.stop();
+    camera_thread.stop();
 
 
 

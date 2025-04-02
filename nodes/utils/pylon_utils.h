@@ -6,6 +6,8 @@
 #include <map>
 #include <set>
 #include <filesystem>
+#include <pylon/PylonIncludes.h>
+#include <pylon/BaslerUniversalInstantCamera.h>
 #include <pylon/ConfigurationEventHandler.h>
 #include <pylon/CameraEventHandler.h>
 #include <pylon/ImageEventHandler.h>

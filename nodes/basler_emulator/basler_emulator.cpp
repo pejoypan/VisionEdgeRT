@@ -111,6 +111,11 @@ bool vert::BaslerEmulator::set_pixel_format(std::string_view format)
     return vert::set_pixel_format(camera_, format);
 }
 
+int vert::BaslerEmulator::get_pixel_format() const
+{
+    return camera_.PixelFormat.GetValue();
+}
+
 void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptrGrabResult)
 {
 

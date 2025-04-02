@@ -28,6 +28,8 @@ namespace vert {
         bool set_fps(double fps);
         bool set_pixel_format(std::string_view format);
 
+        int get_pixel_format() const;
+
         virtual void OnImageGrabbed(Pylon::CInstantCamera & /*camera*/, const Pylon::CGrabResultPtr &ptrGrabResult);
 
     private:

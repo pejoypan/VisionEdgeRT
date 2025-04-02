@@ -1,4 +1,4 @@
-add_subdirectory(abstract_camera)
+add_subdirectory(camera)
 add_subdirectory(algo)
 add_subdirectory(basler_camera)
 add_subdirectory(basler_emulator)
@@ -9,6 +9,7 @@ add_executable(VERT main.cpp)
 
 target_link_libraries(VERT PRIVATE
     basler_emulator
+    camera
     pylon::pylon
     libzmq
     ${OpenCV_LIBS})

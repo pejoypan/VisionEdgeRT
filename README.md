@@ -11,10 +11,10 @@ cmake --build . --config release
 ```
 ### Build Options
 
-| 功能     | 参数                 |
+| Features     | Options                 |
 | -------- | -------------------- |
-| 禁用计时 | VERT_DISABLE_TIMING |
-|          |                      |
+| Disable Timer | VERT_DISABLE_TIMING |
+| Image Window for Debug | VERT_DEBUG_WINDOW  |
 |          |                      |
 
 
@@ -23,6 +23,8 @@ cmake --build . --config release
 
 In powershell prompt
 ```powershell
+cmake --install .
 set_local_path.ps1
-./build/nodes/<your_favorite_node>/Release/<your_favorite_node>.exe
+cd CMAKE_INSTALL_PREFIX
+./VERT.exe
 ```
