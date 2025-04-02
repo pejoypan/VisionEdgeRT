@@ -1,23 +1,21 @@
 #include <iostream>
 #include <pylon/PylonIncludes.h>
-#include <pylon/BaslerUniversalInstantCamera.h>
-#include "../third_party/zmq.hpp"
-#include "../third_party/cxxopts.hpp"
+#include "third_party/zmq.hpp"
+#include "third_party/cxxopts.hpp"
 #include "basler_emulator.h"
 
 // test
 #include <thread>
 #include <future>
 #include <opencv2/opencv.hpp>
-#include "../third_party/msgpack.hpp"
-#include "../third_party/zmq_addon.hpp"
-#include "../utils/types.h"
-#include "../utils/pylon_utils.h"
+#include "third_party/msgpack.hpp"
+#include "third_party/zmq_addon.hpp"
+#include "utils/types.h"
+#include "utils/pylon_utils.h"
 // 
 
 using namespace std;
 using namespace Pylon;
-using namespace Basler_UniversalCameraParams;
 
 void subscriber_thread(zmq::context_t *ctx)
 {
