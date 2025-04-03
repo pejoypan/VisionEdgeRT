@@ -5,12 +5,21 @@ set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
 set(CMAKE_WINDOWS_EXPORT_ALL_SYMBOLS ON)
 
+# Set Install Prefix
 set(CMAKE_INSTALL_PREFIX "C:/VisionEdgeRT" CACHE PATH "Default install prefix" FORCE)
 
-option(VisionEdgeRT_DISABLE_TIMING "Disable Timing" OFF)
+# Set Timing On/Off
+option(VERT_DISABLE_TIMING "Disable Timing" OFF)
 if (VERT_DISABLE_TIMING)
     message(STATUS "VisionEdgeRT: Timing is disabled")
     add_compile_definitions(VERT_DISABLE_TIMING)
+endif()
+
+# Set Debug Window On/Off
+option(VERT_DEBUG_WINDOW "Enable Debug Window" OFF)
+if (VERT_DEBUG_WINDOW)
+    message(STATUS "VisionEdgeRT: Debug Window is Enabled")
+    add_compile_definitions(VERT_DEBUG_WINDOW)
 endif()
 
 if (WIN32)

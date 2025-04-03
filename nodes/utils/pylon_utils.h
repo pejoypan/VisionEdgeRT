@@ -216,6 +216,14 @@ namespace vert
         } 
     }
 
+    inline std::string pixel_type_to_string(Pylon::EPixelType pixel_type) {
+        return Pylon::CPixelTypeMapper::GetNameByPixelType(pixel_type);
+    }
+
+    inline Pylon::EPixelType string_to_pixel_type(std::string_view pixel_type) {
+        return Pylon::CPixelTypeMapper::GetPylonPixelTypeByName(pixel_type.data());
+    }
+
     inline bool set_pixel_format(Pylon::CBaslerUniversalInstantCamera &camera, std::string_view format) {
         std::string format_lower = to_lower(format); 
 
@@ -240,10 +248,27 @@ namespace vert
             }
         }
 
-        std::string message = "<" + std::string(camera.GetDeviceInfo().GetModelName()) + "> doesn't support Pixel Format: " + format.data() + ". Supported: [";
+        std::set<std::string> vert_supported_set = {"Mono8", "BGR8Packed", "RGB8Packed", "BayerGR8", "BayerRG8", "BayerGB8", "BayerBG8"};
+        std::set<std::string> pylon_supported_set;
         GenApi_3_1_Basler_pylon_v3::StringList_t supported_list;
         camera.PixelFormat.GetSettableValues(supported_list);
         for (const auto& val : supported_list) {
+            pylon_supported_set.insert(static_cast<std::string>(val));
+        }
+
+        std::set<std::string> supported;
+        std::set_intersection(vert_supported_set.begin(), vert_supported_set.end(),
+                              pylon_supported_set.begin(), pylon_supported_set.end(), 
+                              std::inserter(supported, supported.begin()));
+        
+        if (supported.find(format.data()) != supported.end()) {
+            if (camera.PixelFormat.TrySetValue(format.data())) {
+                return true;
+            }
+        }
+
+        std::string message = "<" + std::string(camera.GetDeviceInfo().GetModelName()) + "> doesn't support Pixel Format: " + format.data() + ". \nSupported: [";
+        for (const auto& val : supported) {
             message += val + ", "; 
         }
         message += "]";

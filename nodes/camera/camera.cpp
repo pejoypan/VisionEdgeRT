@@ -8,23 +8,32 @@
 
 using namespace std;
 
-#define WINDOW_NAME "recv"
+#define WINDOW_NAME "recv dst"
+#define WINDOW_NAME_SRC "recv src"
 // #define VERT_DEBUG_WINDOW
 
 vert::Camera::Camera(zmq::context_t *ctx, int _dst_type)
     : publisher_(*ctx, zmq::socket_type::pub),
       subscriber_(*ctx, zmq::socket_type::sub),
-      dst_type_(_dst_type)
+      dst_type_(static_cast<Pylon::EPixelType>(_dst_type))
 {
-    publisher_.bind("inproc://#2");
+    cout << "Init Camera" << endl;
     subscriber_.connect("inproc://#1");
     subscriber_.set(zmq::sockopt::subscribe, "");
 
-    converter_.OutputPixelFormat = (Pylon::EPixelType)dst_type_; // Pylon::PixelType_BGR8packed;
+    publisher_.bind("inproc://#2");
+    
+    if (converter_.IsSupportedOutputFormat(dst_type_))
+        converter_.OutputPixelFormat = dst_type_;
+    else {
+        cerr << "pylon converter doesn't support" << vert::pixel_type_to_string(dst_type_) << endl;
+    }
+
+    converter_.OutputOrientation = Pylon::OutputOrientation_TopDown;
     // converter_.OutputBitAlignment = Pylon::OutputBitAlignment_MsbAligned;
     converter_.MaxNumThreads = 1;
     // converter.MaxNumThreads.TrySetToMaximum();
-
+    cout << "Init done" << endl;
 }
 
 vert::Camera::~Camera()
@@ -34,6 +43,7 @@ vert::Camera::~Camera()
 
 void vert::Camera::start()
 {
+    cout << "Start" << endl;
     if (!is_running_) {
         is_running_ = true;
         loop_thread_ = std::thread(&Camera::loop, this);
@@ -61,13 +71,13 @@ cv::Mat vert::Camera::get_curr_image() const
 void vert::Camera::loop()
 {
 #ifdef VERT_DEBUG_WINDOW
-    cv::namedWindow(WINDOW_NAME, cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
+    cv::namedWindow(WINDOW_NAME_SRC, cv::WINDOW_AUTOSIZE | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
+    cv::namedWindow(WINDOW_NAME, cv::WINDOW_AUTOSIZE | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
 #endif
 
     while (is_running_) {
         recv();
 
-        convert(static_cast<Pylon::EPixelType>(type_));
 #ifdef VERT_DEBUG_WINDOW
         display();
 #endif
@@ -82,68 +92,149 @@ void vert::Camera::recv()
     assert(result && "recv failed");
     assert(*result == 2);
 
-    auto [h, w, type, timestamp] = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
+    auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
+    auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
-    type_ = type;
+#ifdef VERT_DEBUG_WINDOW
+    cv::Mat temp = cv::Mat(meta.height, meta.width, vert::pixel_type_to_cv_type(src_type), msgs[1].data()).clone();
+    cv::imshow(WINDOW_NAME_SRC, temp);
+#endif
 
-    img_raw_ = cv::Mat(h, w, vert::pixel_type_to_cv_type(type_), msgs[1].data());
+    convert(msgs[1].data(), meta, src_type);
 
-    cout << "Recv Image " << img_raw_.size() << "Type: " << Pylon::CPixelTypeMapper::GetNameByPixelType((Pylon::EPixelType)type_) << endl;
+    cout << "Recv Image " << img_raw_.size() << "Type: " << vert::pixel_type_to_string(src_type) << endl;
+
 }
 
-void vert::Camera::convert(Pylon::EPixelType from)
+void vert::Camera::cv_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
+    int src_cv_type = vert::pixel_type_to_cv_type(src_type);
+    assert(src_cv_type != -1);
 
-    // TODO: need lock ?
-    if (Pylon::IsMono(from)) {
-        cout << "Mono" << endl;
+    img_raw_ = cv::Mat(meta.height, meta.width, src_cv_type, buffer);
+
+    if (Pylon::IsMonoImage(src_type)) {
         img_cvt_ = img_raw_;
         // img_raw_.copyTo(img_cvt_);
-    } else if (Pylon::IsBayer(from)) {
-        cout << "Bayer" << endl;
+    } else if (Pylon::IsBayer(src_type)) {
 #ifdef USE_CUDA_DEBAYERING
 
 #else
-        int code = -1;
-        switch (from) {
-        case Pylon::PixelType_BayerRG8:
-            code = cv::COLOR_BayerRG2BGR;
-            break;
-        case Pylon::PixelType_BayerGR8:
-            code = cv::COLOR_BayerGR2BGR;
-            break;
-        case Pylon::PixelType_BayerBG8:
-            code = cv::COLOR_BayerBG2BGR;
-            break;
-        case Pylon::PixelType_BayerGB8:
-            code = cv::COLOR_BayerGB2BGR;
-            break;
-        default:
-            break; 
-        }
+        int code = get_bayer_code(src_type);
         assert(code != -1);
-        cv::cvtColor(img_raw_, img_cvt_, code);
+        cv::demosaicing(img_raw_, img_cvt_, code);
 #endif
-    } else if (Pylon::IsBGR(from) || Pylon::IsBGRPacked(from)) {
-        cout << "BGR" << endl;
+    } else if (Pylon::IsBGR(src_type) || Pylon::IsBGRPacked(src_type)) {
         img_cvt_ = img_raw_;
         // img_raw_.copyTo(img_cvt_);
-    } else if (Pylon::IsRGB(from) || Pylon::IsRGBPacked(from)) {
-        cout << "RGB" << endl;
+    } else if (Pylon::IsRGB(src_type) || Pylon::IsRGBPacked(src_type)) {
         cv::cvtColor(img_raw_, img_cvt_, cv::COLOR_RGB2BGR);
     } else {
-        // converter_.ImageHasDestinationFormat() // TODO: more info in msgpack
+        assert(false);
     }
 
 }
 
+void vert::Camera::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
+{
+    if (converter_.ImageHasDestinationFormat(src_type, meta.padding_x, src_orientation_)) {
+        int src_cv_type = vert::pixel_type_to_cv_type(src_type);
+        assert(src_cv_type != -1);
+        img_raw_ = cv::Mat(meta.height, meta.width, src_cv_type, buffer);
+        img_cvt_ = img_raw_;
+
+    } 
+    else {
+        converter_.Convert(pylon_image_, buffer, meta.buffer_size, src_type, meta.width, meta.height, meta.padding_x, src_orientation_);
+        int dst_cv_type = -1;
+        if (Pylon::IsMonoImage(src_type))
+            dst_cv_type = CV_8UC1;
+        else if (Pylon::IsColorImage(src_type))
+            dst_cv_type = CV_8UC3;
+        assert(dst_cv_type != -1);
+        img_cvt_ = cv::Mat(meta.height, meta.width, dst_cv_type, pylon_image_.GetBuffer());
+    }
+}
+
+void vert::Camera::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
+{
+    cout << vert::pixel_type_to_string(src_type) << " ---convert--> " << vert::pixel_type_to_string(dst_type_) << endl;
+
+    if (use_pylon_converter(src_type)) {
+        pylon_convert(buffer, meta, src_type);
+    } else {
+        cv_convert(buffer, meta, src_type);
+    }
+}
+
 void vert::Camera::display()
 {
-    // cv::namedWindow(WINDOW_NAME, cv::WINDOW_NORMAL | cv::WINDOW_KEEPRATIO);
     cv::imshow(WINDOW_NAME, img_cvt_);
     cv::waitKey(1);
 }
 
 void vert::Camera::send()
 {
+
+}
+
+int vert::Camera::get_bayer_code(Pylon::EPixelType from) const
+{
+    switch (from)
+    {
+    case Pylon::PixelType_BayerRG8:
+        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
+            return cv::COLOR_BayerRG2BGR; 
+        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
+            return cv::COLOR_BayerRG2BGR_VNG; 
+        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
+            return cv::COLOR_BayerRG2BGR_EA; 
+        } else {
+            return cv::COLOR_BayerRG2BGR;
+        }
+    case Pylon::PixelType_BayerGR8:
+        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
+            return cv::COLOR_BayerGR2BGR; 
+        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
+            return cv::COLOR_BayerGR2BGR_VNG; 
+        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
+            return cv::COLOR_BayerGR2BGR_EA;
+        } else {
+            return cv::COLOR_BayerGR2BGR;
+        }
+    case Pylon::PixelType_BayerBG8:
+        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
+            return cv::COLOR_BayerBG2BGR; 
+        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
+            return cv::COLOR_BayerBG2BGR_VNG; 
+        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
+            return cv::COLOR_BayerBG2BGR_EA; 
+        } else {
+            return cv::COLOR_BayerBG2BGR; 
+        }
+    case Pylon::PixelType_BayerGB8:
+        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
+            return cv::COLOR_BayerGB2BGR; 
+        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
+            return cv::COLOR_BayerGB2BGR_VNG; 
+        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
+            return cv::COLOR_BayerGB2BGR_EA;
+        } else {
+            return cv::COLOR_BayerGB2BGR;
+        }
+    default:
+        return -1;
+    }
+}
+
+bool vert::Camera::use_pylon_converter(Pylon::EPixelType from) const
+{
+    return !(
+        Pylon::IsMonoImage(from) ||
+        // Pylon::IsBayer(from) ||  // temporarily use pylon converter
+        Pylon::IsBGR(from) ||
+        Pylon::IsBGRPacked(from) ||
+        Pylon::IsRGB(from) ||
+        Pylon::IsRGBPacked(from)
+    );
 }

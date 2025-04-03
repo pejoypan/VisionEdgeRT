@@ -16,7 +16,7 @@ vert::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
     publisher_ = zmq::socket_t(*ctx, zmq::socket_type::pub);
     publisher_.bind("inproc://#1");
 
-    this_thread::sleep_for(chrono::milliseconds(20));
+    this_thread::sleep_for(chrono::milliseconds(20)); // FIXME wait for others socket to bind
 
     camera_.RegisterImageEventHandler( this, RegistrationMode_ReplaceAll, Cleanup_None );
 
@@ -113,7 +113,8 @@ bool vert::BaslerEmulator::set_pixel_format(std::string_view format)
 
 int vert::BaslerEmulator::get_pixel_format() const
 {
-    return camera_.PixelFormat.GetValue();
+    auto str = camera_.PixelFormat.ToString();
+    return Pylon::CPixelTypeMapper::GetPylonPixelTypeByName(str.c_str());
 }
 
 void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptrGrabResult)
@@ -123,8 +124,9 @@ void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::
     auto meta_data = msgpack::pack(GrabMeta{ptrGrabResult->GetHeight(),
                                             ptrGrabResult->GetWidth(),
                                             (int)ptrGrabResult->GetPixelType(),
-                                            ptrGrabResult->GetTimeStamp()}); // camera name, etc
-
+                                            ptrGrabResult->GetTimeStamp(),
+                                            ptrGrabResult->GetPaddingX(),
+                                            ptrGrabResult->GetBufferSize()}); // camera name, etc
 
     zmq::message_t meta_msg(meta_data.data(), meta_data.size()); // TODO: size?
     publisher_.send(meta_msg, zmq::send_flags::sndmore);

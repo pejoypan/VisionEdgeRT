@@ -18,33 +18,6 @@
 using namespace std;
 using namespace Pylon;
 
-void subscriber_thread(zmq::context_t *ctx)
-{
-    zmq::socket_t subscriber(*ctx, zmq::socket_type::sub);
-    subscriber.connect("inproc://#1");
-
-    subscriber.set(zmq::sockopt::subscribe, "");
-
-    cv::Mat frame;
-
-    cv::namedWindow("Received", cv::WINDOW_NORMAL);
-
-    while (true) {
-
-        vector<zmq::message_t> msgs;
-        zmq::recv_result_t result = zmq::recv_multipart(subscriber, std::back_inserter(msgs));
-        assert(result && "recv failed");
-        assert(*result == 2);
-
-        auto [h, w, type, timestamp] = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
-
-        frame = cv::Mat(h, w, vert::pixel_type_to_cv_type(type), msgs[1].data());
-
-        cv::imshow("Received", frame);
-        cv::waitKey(1);
-    }
-}
-
 
 int main(int argc, char* argv[])
 {
@@ -55,7 +28,7 @@ int main(int argc, char* argv[])
         ("img", "Image File/Folder to test", cxxopts::value<string>()->default_value(""))
         ("max", "Max number of images to grab", cxxopts::value<int>()->default_value("100"))
         ("fps", "FPS", cxxopts::value<double>()->default_value("30.0"))
-        ("pixel-format", "Image Pixel format", cxxopts::value<string>()->default_value("bgr"))
+        ("pixel-format", "Mono8, BGR8Packed, RGB8Packed, BayerGR8, BayerRG8, BayerGB8, BayerBG8", cxxopts::value<string>()->default_value("bgr"))
         ;
 
     options.allow_unrecognised_options();
@@ -103,7 +76,17 @@ int main(int argc, char* argv[])
         max_images = result["max"].as<int>();
     } 
 
-    vert::Camera camera_thread(&context, camera.get_pixel_format());
+    auto pixel_format = camera.get_pixel_format(); // TODO: simplify this
+    int image_format;
+    if (Pylon::IsColorImage((Pylon::EPixelType)pixel_format)) {
+        image_format = Pylon::PixelType_BGR8packed;
+    } else if (Pylon::IsMonoImage((Pylon::EPixelType)pixel_format)) {
+        image_format = Pylon::PixelType_Mono8; 
+    } else {
+        cerr << "unsupported pixel format" << endl;
+    }
+
+    vert::Camera camera_thread(&context, image_format);
     camera_thread.start();
 
     max_images > 0 ? camera.start(max_images) : camera.start();
