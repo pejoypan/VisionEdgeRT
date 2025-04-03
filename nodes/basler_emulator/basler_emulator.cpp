@@ -89,7 +89,7 @@ void vert::BaslerEmulator::start(int max_images)
 void vert::BaslerEmulator::stop()
 {
     camera_.StopGrabbing();
-    timer_.elapsed();
+    cout << "Elapsed: " << timer_.elapsed() << " ms"; // For filemode test
 }
 
 bool vert::BaslerEmulator::set_image_filename(std::string_view filename)
