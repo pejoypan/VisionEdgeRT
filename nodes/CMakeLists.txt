@@ -12,6 +12,8 @@ target_link_libraries(VERT PRIVATE
     camera
     pylon::pylon
     libzmq
+    spdlog::spdlog
+    $<$<BOOL:${MINGW}>:ws2_32>
     ${OpenCV_LIBS})
 
 install(TARGETS VERT

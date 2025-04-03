@@ -1,5 +1,6 @@
 #include <iostream>
 #include <pylon/PylonIncludes.h>
+#include <spdlog/spdlog.h>
 #include "third_party/zmq.hpp"
 #include "third_party/cxxopts.hpp"
 #include "basler_emulator.h"
