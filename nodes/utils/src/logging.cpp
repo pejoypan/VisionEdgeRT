@@ -1,5 +1,5 @@
 #include "logging.h"
 
 namespace vert {
-    spdlog::logger* logger = nullptr;  // 唯一定义
+    std::shared_ptr<spdlog::logger> logger;
 }

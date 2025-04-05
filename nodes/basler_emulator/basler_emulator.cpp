@@ -5,6 +5,7 @@
 #include "../utils/pylon_utils.h"
 #include "../utils/timer.h"
 #include "../utils/types.h"
+#include "../utils/logging.h"
 
 using namespace vert;
 using namespace std;
@@ -59,7 +60,7 @@ void vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
     }
     catch (const Pylon::GenericException& e)
     {
-        cerr << "Failed to interact with camera. Reason: " << e.what() << endl;
+        vert::logger->error("Failed to open camera. Reason: {}", e.what());
     }
 }
 
@@ -89,7 +90,7 @@ void vert::BaslerEmulator::start(int max_images)
 void vert::BaslerEmulator::stop()
 {
     camera_.StopGrabbing();
-    cout << "Elapsed: " << timer_.elapsed() << " ms"; // For filemode test
+    vert::logger->info("Elapsed: {} ms", timer_.elapsed());
 }
 
 bool vert::BaslerEmulator::set_image_filename(std::string_view filename)
@@ -121,7 +122,8 @@ void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::
 {
 
     // Send meta
-    auto meta_data = msgpack::pack(GrabMeta{ptrGrabResult->GetHeight(),
+    auto meta_data = msgpack::pack(GrabMeta{ptrGrabResult->GetID(),
+                                            ptrGrabResult->GetHeight(),
                                             ptrGrabResult->GetWidth(),
                                             (int)ptrGrabResult->GetPixelType(),
                                             ptrGrabResult->GetTimeStamp(),
@@ -140,7 +142,7 @@ void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::
                 nullptr);
     publisher_.send(msg, zmq::send_flags::dontwait);
 
-    cout << "Publish Image" << endl;
+    vert::logger->trace("Send: meta {} bytes, image {} bytes", meta_msg.size(), msg.size());
 
     // TODO: what if buffer full?
 }

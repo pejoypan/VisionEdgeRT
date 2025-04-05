@@ -5,6 +5,7 @@
 #include "../third_party/msgpack.hpp"
 #include "../third_party/zmq_addon.hpp"
 #include "../utils/pylon_utils.h"
+#include "../utils/logging.h"
 
 using namespace std;
 
@@ -17,7 +18,7 @@ vert::Camera::Camera(zmq::context_t *ctx, int _dst_type)
       subscriber_(*ctx, zmq::socket_type::sub),
       dst_type_(static_cast<Pylon::EPixelType>(_dst_type))
 {
-    cout << "Init Camera" << endl;
+    vert::logger->info("Init Abstract Camera");
     subscriber_.connect("inproc://#1");
     subscriber_.set(zmq::sockopt::subscribe, "");
 
@@ -26,14 +27,14 @@ vert::Camera::Camera(zmq::context_t *ctx, int _dst_type)
     if (converter_.IsSupportedOutputFormat(dst_type_))
         converter_.OutputPixelFormat = dst_type_;
     else {
-        cerr << "pylon converter doesn't support" << vert::pixel_type_to_string(dst_type_) << endl;
+        vert::logger->error("pylon converter doesn't support {}", vert::pixel_type_to_string(dst_type_));
     }
 
     converter_.OutputOrientation = Pylon::OutputOrientation_TopDown;
     // converter_.OutputBitAlignment = Pylon::OutputBitAlignment_MsbAligned;
     converter_.MaxNumThreads = 1;
     // converter.MaxNumThreads.TrySetToMaximum();
-    cout << "Init done" << endl;
+    vert::logger->info("Abstract Camera Inited");
 }
 
 vert::Camera::~Camera()
@@ -43,20 +44,23 @@ vert::Camera::~Camera()
 
 void vert::Camera::start()
 {
-    cout << "Start" << endl;
+    vert::logger->info("Starting...");
     if (!is_running_) {
         is_running_ = true;
         loop_thread_ = std::thread(&Camera::loop, this);
+        vert::logger->info("Started");
     }
 }
 
 void vert::Camera::stop()
 {
+    vert::logger->info("Stopping...");
     if (is_running_) {
         is_running_ = false;
         if (loop_thread_.joinable()) {
             loop_thread_.join();
         }
+        vert::logger->info("Stopped");
     }
 #ifdef VERT_DEBUG_WINDOW
     cv::destroyWindow(WINDOW_NAME);
@@ -95,14 +99,14 @@ void vert::Camera::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
+    vert::logger->trace("Recv Image ID: {} Timestamp: {} ({} x {} {})", meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
+
 #ifdef VERT_DEBUG_WINDOW
     cv::Mat temp = cv::Mat(meta.height, meta.width, vert::pixel_type_to_cv_type(src_type), msgs[1].data()).clone();
     cv::imshow(WINDOW_NAME_SRC, temp);
 #endif
 
     convert(msgs[1].data(), meta, src_type);
-
-    cout << "Recv Image " << img_raw_.size() << "Type: " << vert::pixel_type_to_string(src_type) << endl;
 
 }
 
@@ -158,7 +162,7 @@ void vert::Camera::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon
 
 void vert::Camera::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
-    cout << vert::pixel_type_to_string(src_type) << " ---convert--> " << vert::pixel_type_to_string(dst_type_) << endl;
+    vert::logger->trace("{} ---convert--> {}", vert::pixel_type_to_string(src_type), vert::pixel_type_to_string(dst_type_));
 
     if (use_pylon_converter(src_type)) {
         pylon_convert(buffer, meta, src_type);

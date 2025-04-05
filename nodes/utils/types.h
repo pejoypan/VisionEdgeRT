@@ -6,6 +6,7 @@
 namespace vert
 {
     struct GrabMeta {
+        int64_t id;
         uint32_t height;
         uint32_t width;
         int pixel_type;
@@ -15,7 +16,7 @@ namespace vert
       
         template<class T>
         void pack(T &_pack) {
-            _pack(height, width, pixel_type, timestamp, padding_x, buffer_size);
+            _pack(id, height, width, pixel_type, timestamp, padding_x, buffer_size);
         }
     };
 } 

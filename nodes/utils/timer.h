@@ -4,6 +4,7 @@
 #include <string>
 #include <chrono>
 #include <iostream>
+#include "logging.h"
 
 namespace vert
 {
@@ -34,9 +35,6 @@ public:
 #else // VERT_DISABLE_TIMING
 class SimpleTimer
 {
-/*
-    TODO: disable at release
-*/
 
 public:
     SimpleTimer(const std::string &_name)
@@ -46,7 +44,7 @@ public:
     }
     ~SimpleTimer()
     {
-        std::cout << "Time(" << name_ << "): " << elapsed() << " ms" << std::endl;
+        vert::logger->debug("{} elapsed: {} ms", name_, elapsed());
     }
 
     void start() {

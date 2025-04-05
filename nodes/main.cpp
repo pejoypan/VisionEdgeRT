@@ -1,27 +1,37 @@
 #include <iostream>
 #include <pylon/PylonIncludes.h>
 #include <spdlog/spdlog.h>
+#include "spdlog/sinks/rotating_file_sink.h"
+#include "spdlog/sinks/stdout_color_sinks.h"
 #include "third_party/zmq.hpp"
 #include "third_party/cxxopts.hpp"
+#include "utils/logging.h"
+
 #include "basler_emulator.h"
 #include "camera.h"
 
-// test
-#include <thread>
-#include <future>
-#include <opencv2/opencv.hpp>
-#include "third_party/msgpack.hpp"
-#include "third_party/zmq_addon.hpp"
-#include "utils/types.h"
-#include "utils/pylon_utils.h"
-// 
-
 using namespace std;
-using namespace Pylon;
 
 
 int main(int argc, char* argv[])
 {
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(spdlog::level::warn); 
+    console_sink->set_pattern("[%H:%M:%S] %^%l%$ %v");
+
+    const size_t MAX_LOG_SIZE = 1024 * 1024 * 100; // 100 MB
+    const size_t MAX_LOG_FILES = 5;
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/vert.log", MAX_LOG_SIZE, MAX_LOG_FILES);
+    file_sink->set_level(spdlog::level::trace);
+    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v");
+
+    auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
+    vert::logger = std::make_shared<spdlog::logger>("multi_sink", sink_list.begin(), sink_list.end());
+    vert::logger->set_level(spdlog::level::trace); // Set global log level to trace TODO: config
+    vert::logger->flush_on(spdlog::level::info); // TODO: config
+
+    vert::logger->info("**** Welcome to VisionEdgeRT ****");
+                        
     cxxopts::Options options("basler_emulator", "pylon camera emulation, set PYLON_CAMEMU to variable");
 
     options.add_options()
@@ -55,8 +65,7 @@ int main(int argc, char* argv[])
         if (!camera.set_image_filename(filename))
             return 1;
     } else {
-        string message = "img not specified";
-        cerr << message << endl;
+        vert::logger->critical("img not specified");
         return 1;
     }
 
@@ -84,7 +93,7 @@ int main(int argc, char* argv[])
     } else if (Pylon::IsMonoImage((Pylon::EPixelType)pixel_format)) {
         image_format = Pylon::PixelType_Mono8; 
     } else {
-        cerr << "unsupported pixel format" << endl;
+        vert::logger->error("unsupported pixel format");
     }
 
     vert::Camera camera_thread(&context, image_format);

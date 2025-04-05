@@ -7,6 +7,10 @@ add_library(vert_utils SHARED
     src/string_utils.cpp
 )
 
+if (MSVC)
+    target_compile_definitions(vert_utils PRIVATE VERT_UTILS_BUILD)  # to export logger
+endif()
+
 target_include_directories(vert_utils PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 
 target_link_libraries(vert_utils PUBLIC 
