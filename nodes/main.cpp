@@ -14,28 +14,19 @@ using namespace std;
 
 
 int main(int argc, char* argv[])
-{
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level(spdlog::level::warn); 
-    console_sink->set_pattern("[%H:%M:%S] %^%l%$ %v");
-
-    const size_t MAX_LOG_SIZE = 1024 * 1024 * 100; // 100 MB
-    const size_t MAX_LOG_FILES = 5;
-    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>("logs/vert.log", MAX_LOG_SIZE, MAX_LOG_FILES);
-    file_sink->set_level(spdlog::level::trace);
-    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v");
-
-    auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
-    vert::logger = std::make_shared<spdlog::logger>("multi_sink", sink_list.begin(), sink_list.end());
-    vert::logger->set_level(spdlog::level::trace); // Set global log level to trace TODO: config
-    vert::logger->flush_on(spdlog::level::info); // TODO: config
-
-    vert::logger->info("**** Welcome to VisionEdgeRT ****");
-                        
-    cxxopts::Options options("basler_emulator", "pylon camera emulation, set PYLON_CAMEMU to variable");
+{             
+    cxxopts::Options options("VisionEdgeRT", "if use pylon camera emulation, set PYLON_CAMEMU to variable");
 
     options.add_options()
         ("h,help", "Print help")
+        ("log-level", "Log Level", cxxopts::value<string>()->default_value("info")) 
+        ("log-console-level", "Console Log Level", cxxopts::value<string>()->default_value("warn"))
+        // ("log-file-level", "Console Log Level", cxxopts::value<string>()->default_value("info")) // file level always same as log level
+        ("log-flush-level", "Console Log Level", cxxopts::value<string>()->default_value("info"))
+        ("log-file", "Log File", cxxopts::value<string>()->default_value("logs/vert.log"))
+        ("log-max-size", "Max Log File Size (MB)", cxxopts::value<int>()->default_value("100"))
+        ("log-max-files", "Max Log Files", cxxopts::value<int>()->default_value("5"))
+
         ("img", "Image File/Folder to test", cxxopts::value<string>()->default_value(""))
         ("max", "Max number of images to grab", cxxopts::value<int>()->default_value("100"))
         ("fps", "FPS", cxxopts::value<double>()->default_value("30.0"))
@@ -51,6 +42,26 @@ int main(int argc, char* argv[])
         cout << options.help() << endl;
         return 0;
     }
+
+    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+    console_sink->set_level(spdlog::level::from_str(result["log-console-level"].as<string>())); 
+    console_sink->set_pattern("[%H:%M:%S] %^%l%$ %v");
+
+    auto log_level = spdlog::level::from_str(result["log-level"].as<string>());
+    const size_t MAX_LOG_SIZE = 1024 * 1024 * result["log-max-size"].as<int>(); // 100 MB
+    const size_t MAX_LOG_FILES = result["log-max-files"].as<int>();
+    auto log_file = result["log-file"].as<string>();
+    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file, MAX_LOG_SIZE, MAX_LOG_FILES);
+    file_sink->set_level(log_level);
+    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v");
+
+    auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
+    vert::logger = std::make_shared<spdlog::logger>("multi_sink", sink_list.begin(), sink_list.end());
+    vert::logger->set_level(log_level); 
+    auto log_flush_level = result.count("log_flush_level") ? spdlog::level::from_str(result["log-flush-level"].as<string>()) : log_level;
+    vert::logger->flush_on(log_flush_level);
+
+    vert::logger->info("**** Welcome to VisionEdgeRT ****");
 
     Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
     
