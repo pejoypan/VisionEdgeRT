@@ -9,14 +9,16 @@ add_subdirectory(io)
 add_executable(VERT main.cpp)
 
 target_link_libraries(VERT PRIVATE
-    vert_utils  
-    basler_emulator
-    camera
     pylon::pylon
     libzmq
     spdlog::spdlog
     $<$<BOOL:${MINGW}>:ws2_32>
-    ${OpenCV_LIBS})
+    ${OpenCV_LIBS}
+    vert_utils  
+    basler_emulator
+    camera
+    image_writer
+)
 
 install(TARGETS VERT
         RUNTIME DESTINATION bin)

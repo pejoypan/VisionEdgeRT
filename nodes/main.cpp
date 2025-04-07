@@ -9,6 +9,7 @@
 
 #include "basler_emulator.h"
 #include "camera.h"
+#include "image_writer.h"
 
 using namespace std;
 
@@ -106,6 +107,9 @@ int main(int argc, char* argv[])
     } else {
         vert::logger->error("unsupported pixel format");
     }
+
+    vert::ImageWriter writer(&context, 3, "D:/job_win/dev/dev_HPMVA/write_image_to");
+    writer.start();
 
     vert::Camera camera_thread(&context, image_format);
     camera_thread.start();

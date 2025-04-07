@@ -15,7 +15,7 @@ cmake --build . --config release
 | -------- | -------------------- |
 | Disable Timer | VERT_DISABLE_TIMING |
 | Image Window for Debug | VERT_DEBUG_WINDOW  |
-|          |                      |
+| Enable Testing | VERT_ENABLE_TEST |
 
 
 

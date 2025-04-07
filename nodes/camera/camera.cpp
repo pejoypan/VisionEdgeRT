@@ -99,6 +99,8 @@ void vert::Camera::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
+    img_meta_ = MatMeta{meta.id, meta.height, meta.width, vert::pixel_type_to_cv_type(meta.pixel_type), meta.timestamp};
+
     vert::logger->trace("Recv Image ID: {} Timestamp: {} ({} x {} {})", meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
 
 #ifdef VERT_DEBUG_WINDOW
@@ -179,7 +181,15 @@ void vert::Camera::display()
 
 void vert::Camera::send()
 {
+    auto meta_data = msgpack::pack(img_meta_);
+    zmq::message_t meta_msg(meta_data.data(), meta_data.size());
+    publisher_.send(meta_msg, zmq::send_flags::sndmore);
 
+    zmq::message_t img_msg;
+    img_msg.rebuild(img_cvt_.data ,img_cvt_.total() * img_cvt_.elemSize());
+    publisher_.send(img_msg, zmq::send_flags::dontwait);
+
+    vert::logger->trace("Publish: [meta {} bytes, image {} bytes]", meta_msg.size(), img_msg.size());
 }
 
 int vert::Camera::get_bayer_code(Pylon::EPixelType from) const

@@ -68,6 +68,8 @@ namespace vert {
         cv::Mat img_raw_;
         cv::Mat img_cvt_;
 
+        MatMeta img_meta_;
+
         int CV_DEMOSAICING_FLAG_ = Bilinear;
 
         Pylon::EPixelType dst_type_ = Pylon::EPixelType::PixelType_Undefined;
