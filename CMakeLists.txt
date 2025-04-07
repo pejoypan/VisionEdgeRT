@@ -26,6 +26,10 @@ if (WIN32)
     add_compile_definitions(NOMINMAX)
 endif()
 
+if (MSVC)
+    add_compile_definitions(_CRT_SECURE_NO_WARNINGS)
+endif()
+
 find_package(OpenCV 3.4.16 REQUIRED COMPONENTS core imgproc imgcodecs highgui)
 
 find_package(pylon 8.0.1 REQUIRED)
