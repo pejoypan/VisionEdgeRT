@@ -232,7 +232,7 @@ bool vert::set_image_filename(Pylon::CBaslerUniversalInstantCamera &camera, std:
     std::filesystem::path file_path(filename);
 
     if (!std::filesystem::exists(file_path)) {
-        vert::logger->error("{} not exists", file_path.string().c_str());
+        vert::logger->error("file path: {} not exists", file_path.string().c_str());
         return false;
     }
 

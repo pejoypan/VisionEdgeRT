@@ -15,9 +15,7 @@ using namespace Basler_UniversalCameraParams;
 vert::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
 {
     publisher_ = zmq::socket_t(*ctx, zmq::socket_type::pub);
-    publisher_.bind("inproc://#1");
 
-    this_thread::sleep_for(chrono::milliseconds(20)); // FIXME wait for others socket to bind
 
     camera_.RegisterImageEventHandler( this, RegistrationMode_ReplaceAll, Cleanup_None );
 
@@ -26,6 +24,73 @@ vert::BaslerEmulator::BaslerEmulator(zmq::context_t *ctx)
 vert::BaslerEmulator::~BaslerEmulator()
 {
     close();
+}
+
+bool vert::BaslerEmulator::init(const YAML::Node &config)
+{
+    vert::logger->info("Init BaslerEmulator");
+    try {
+        if (!config) {
+            vert::logger->critical("Failed to init camera. Reason: config is empty");
+            return false; 
+        }
+
+        if (config["name"]) {
+            name_ = config["name"].as<string>(); 
+        } else {
+            vert::logger->warn("name not provided.");
+        }
+
+        if (config["port"]) {
+            publisher_.bind(config["port"].as<string>());
+        } else {
+            vert::logger->critical("Failed to init '{}'. Reason: port is empty", name_);
+            return false;
+        }
+
+        if (config["user_id"]) {
+            cfg_.user_id = config["user_id"].as<string>(); 
+        } else {
+            vert::logger->critical("Failed to init '{}'. Reason: user_id is empty", name_);
+            return false; 
+        }
+
+        if (config["file_path"]) {
+            // set @ open()
+            cfg_.file_path = config["file_path"].as<string>();
+        } else {
+            vert::logger->critical("Failed to init '{}'. Reason: file_path is empty", name_);
+            return false; 
+        }
+
+        if (config["max_images"]) {
+            // set @ open()
+            cfg_.max_images = config["max_images"].as<int>();
+        } else {
+            vert::logger->warn("max_images not provided, use default {}.", cfg_.max_images);
+        }
+
+        if (config["fps"]) {
+            // set @ open()
+            cfg_.fps = config["fps"].as<double>(); 
+        } else {
+            vert::logger->warn("fps not provided, use default {}.", cfg_.fps); 
+        }
+
+        if (config["pixel_format"]) {
+            // set @ open()
+            cfg_.pixel_format = config["pixel_format"].as<string>(); 
+        } else {
+            vert::logger->warn("pixel_format not provided, use default {}.", cfg_.pixel_format); 
+        }
+
+    } catch (const YAML::Exception& e) {
+        vert::logger->critical("Failed to init '{}'. Reason: {}", name_, e.what());
+        return false; 
+    }
+    vert::logger->info("BaslerEmulator Inited");
+
+    return true;
 }
 
 bool vert::BaslerEmulator::is_open() const
@@ -38,7 +103,7 @@ bool vert::BaslerEmulator::is_grabbing() const
     return camera_.IsGrabbing();
 }
 
-void vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
+bool vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
 {
     // TODO: mutex ?
     try {
@@ -50,18 +115,31 @@ void vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
         
         // TODO: what if real camera exists?
         vert::register_default_events(camera_);
-        
+
+        camera_.DeviceUserID.SetValue(cfg_.user_id.c_str());
         // Disable standard test images
         camera_.TestImageSelector.SetValue(TestImageSelector_Off);
         // Enable custom test images
         camera_.ImageFileMode.SetValue(ImageFileMode_On);
         
         camera_.AcquisitionMode.SetValue(AcquisitionMode_Continuous);
+
+        if (!set_image_filename(cfg_.file_path))
+            return false;
+
+        set_fps(cfg_.fps);
+
+        if (!set_pixel_format(cfg_.pixel_format))
+            return false;
+
     }
     catch (const Pylon::GenericException& e)
     {
         vert::logger->error("Failed to open camera. Reason: {}", e.what());
+        return false;
     }
+
+    return true;
 }
 
 void vert::BaslerEmulator::close()
@@ -77,15 +155,14 @@ void vert::BaslerEmulator::close()
 void vert::BaslerEmulator::start()
 {
     timer_.start();
-    camera_.StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    if (cfg_.max_images > 0) {
+        camera_.StartGrabbing(cfg_.max_images, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    } else {
+        camera_.StartGrabbing(GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
+    }
     
 }
 
-void vert::BaslerEmulator::start(int max_images)
-{
-    timer_.start();
-    camera_.StartGrabbing(max_images, GrabStrategy_OneByOne, GrabLoop_ProvidedByInstantCamera);
-}
 
 void vert::BaslerEmulator::stop()
 {

@@ -9,3 +9,7 @@ Write-Host -ForegroundColor Green "Add ${spdlog_BIN} to PATH"
 $OpenCV_BIN = "D:\lib\opencv-3.4.16\x64\vc15\bin"
 $env:PATH = "${OpenCV_BIN};" + $env:PATH
 Write-Host -ForegroundColor Green "Add ${OpenCV_BIN} to PATH"
+
+$yamlcpp_BIN = "D:\lib\yaml-cpp-0.8.0\bin"
+$env:PATH = "${yamlcpp_BIN};" + $env:PATH
+Write-Host -ForegroundColor Green "Add ${yamlcpp_BIN} to PATH"

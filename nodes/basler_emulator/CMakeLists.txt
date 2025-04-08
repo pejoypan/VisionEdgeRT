@@ -7,6 +7,7 @@ target_include_directories(basler_emulator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) #
 
 target_link_libraries(basler_emulator PRIVATE 
     pylon::pylon
+    yaml-cpp::yaml-cpp
     libzmq
     vert_utils
 )

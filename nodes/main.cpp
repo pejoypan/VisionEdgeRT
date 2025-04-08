@@ -1,6 +1,7 @@
 #include <iostream>
 #include <pylon/PylonIncludes.h>
 #include <spdlog/spdlog.h>
+#include <yaml-cpp/yaml.h>
 #include "spdlog/sinks/rotating_file_sink.h"
 #include "spdlog/sinks/stdout_color_sinks.h"
 #include "third_party/zmq.hpp"
@@ -13,6 +14,66 @@
 
 using namespace std;
 
+bool init_logger(const YAML::Node& config) {
+
+    try {
+        if (!config) {
+            cerr << "Failed to init logging. Reason: logging node is empty" << endl;
+            return false;
+        }
+
+        auto str_level = config["level"] ? config["level"].as<string>() : "info";
+        auto global_level = spdlog::level::from_str(str_level);
+        if (global_level == spdlog::level::off) {
+            cerr << "WARN: log level is off." << endl;
+        }
+        auto flush_level = config["flush_on"] ? spdlog::level::from_str(config["flush_on"].as<string>()) : global_level;
+
+        vector<shared_ptr<spdlog::sinks::sink>> sinks;
+
+        if (config["console"]) {
+            auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
+            string level = config["console"]["level"] ? config["console"]["level"].as<string>() : "info";
+            console_sink->set_level(spdlog::level::from_str(level)); 
+            console_sink->set_pattern("[%H:%M:%S] %^%l%$ %v");
+            sinks.push_back(console_sink);
+        }
+
+        if (config["file"]) {
+            const auto& filenode = config["file"];
+            auto file_level = filenode["level"] ? spdlog::level::from_str(filenode["level"].as<string>()) : global_level;
+            if (file_level == spdlog::level::off) {
+                cerr << "WARN: file log level is off." << endl; 
+            }
+            int max_size = filenode["max_size"] ? filenode["max_size"].as<int>() : 100; // 100 MB default
+            max_size = max_size * 1024 * 1024;
+            int max_num = filenode["max_num"] ? filenode["max_num"].as<int>() : 5; // 5 files default
+            string path = filenode["path"] ? filenode["path"].as<string>() : "logs/vert.log";
+
+            auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(path, max_size, max_num);
+            file_sink->set_level(file_level);
+            file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v");
+            sinks.push_back(file_sink);
+        } else {
+            cerr << "Failed to init logging. Reason: file node is empty" << endl;
+            return false;
+        }
+
+        // auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
+        vert::logger = std::make_shared<spdlog::logger>("multi_sink", sinks.begin(), sinks.end());
+        vert::logger->set_level(global_level); 
+        vert::logger->flush_on(flush_level);
+
+    } catch (const std::exception& e) {
+        cerr << "Failed to init logging. Reason: " << e.what() << endl;
+        return false; 
+    }
+
+    vert::logger->info("**** Welcome to VisionEdgeRT ****");
+
+    return true;
+}
+
 
 int main(int argc, char* argv[])
 {             
@@ -20,18 +81,7 @@ int main(int argc, char* argv[])
 
     options.add_options()
         ("h,help", "Print help")
-        ("log-level", "Log Level", cxxopts::value<string>()->default_value("info")) 
-        ("log-console-level", "Console Log Level", cxxopts::value<string>()->default_value("warn"))
-        // ("log-file-level", "Console Log Level", cxxopts::value<string>()->default_value("info")) // file level always same as log level
-        ("log-flush-level", "Console Log Level", cxxopts::value<string>()->default_value("info"))
-        ("log-file", "Log File", cxxopts::value<string>()->default_value("logs/vert.log"))
-        ("log-max-size", "Max Log File Size (MB)", cxxopts::value<int>()->default_value("100"))
-        ("log-max-files", "Max Log Files", cxxopts::value<int>()->default_value("5"))
-
-        ("img", "Image File/Folder to test", cxxopts::value<string>()->default_value(""))
-        ("max", "Max number of images to grab", cxxopts::value<int>()->default_value("100"))
-        ("fps", "FPS", cxxopts::value<double>()->default_value("30.0"))
-        ("pixel-format", "Mono8, BGR8Packed, RGB8Packed, BayerGR8, BayerRG8, BayerGB8, BayerBG8", cxxopts::value<string>()->default_value("bgr"))
+        ("c,config", "Config File", cxxopts::value<string>()->default_value("init.yaml"))
         ;
 
     options.allow_unrecognised_options();
@@ -44,61 +94,41 @@ int main(int argc, char* argv[])
         return 0;
     }
 
-    auto console_sink = std::make_shared<spdlog::sinks::stdout_color_sink_mt>();
-    console_sink->set_level(spdlog::level::from_str(result["log-console-level"].as<string>())); 
-    console_sink->set_pattern("[%H:%M:%S] %^%l%$ %v");
+    YAML::Node config;
 
-    auto log_level = spdlog::level::from_str(result["log-level"].as<string>());
-    const size_t MAX_LOG_SIZE = 1024 * 1024 * result["log-max-size"].as<int>(); // 100 MB
-    const size_t MAX_LOG_FILES = result["log-max-files"].as<int>();
-    auto log_file = result["log-file"].as<string>();
-    auto file_sink = std::make_shared<spdlog::sinks::rotating_file_sink_mt>(log_file, MAX_LOG_SIZE, MAX_LOG_FILES);
-    file_sink->set_level(log_level);
-    file_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%^%l%$] [thread %t] %v");
+    if (result.count("config")) {
+        auto config_file = result["config"].as<string>(); 
+        try {
+            config = YAML::LoadFile(config_file);
 
-    auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
-    vert::logger = std::make_shared<spdlog::logger>("multi_sink", sink_list.begin(), sink_list.end());
-    vert::logger->set_level(log_level); 
-    auto log_flush_level = result.count("log_flush_level") ? spdlog::level::from_str(result["log-flush-level"].as<string>()) : log_level;
-    vert::logger->flush_on(log_flush_level);
-
-    vert::logger->info("**** Welcome to VisionEdgeRT ****");
-
-    Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
-    
-    zmq::context_t context(0);
-    vert::BaslerEmulator camera(&context);
-
-    Pylon::CDeviceInfo devInfo;
-    camera.open(devInfo);
-
-    if (result.count("img")) {
-        auto filename = result["img"].as<string>();
-        if (!camera.set_image_filename(filename))
-            return 1;
+        } catch (const YAML::Exception& e) {
+            cerr << "Failed to load config file. Reason: " << e.what() << endl;
+            return 1; 
+        }
     } else {
-        vert::logger->critical("img not specified");
+        cerr << "Config file not specified" << endl;
+        return 1;
+    }
+
+    if (!init_logger(config["logging"])) {
         return 1;
     }
 
 
-    if (result.count("fps")) {
-        double fps = result["fps"].as<double>();
-        camera.set_fps(fps);
+    Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
+    
+    zmq::context_t context(0);
+    vert::BaslerEmulator camera_emu(&context);
+    if (!camera_emu.init(config["basler_emulator"])) {
+        return 1;
     }
 
-    if (result.count("pixel-format")) {
-        auto pixel_format = result["pixel-format"].as<string>();
-        if (!camera.set_pixel_format(pixel_format)) 
-            return 1;
+    Pylon::CDeviceInfo devInfo;
+    if (!camera_emu.open(devInfo)) {
+        return 1;
     }
 
-    int max_images = -1;
-    if (result.count("max")) {
-        max_images = result["max"].as<int>();
-    } 
-
-    auto pixel_format = camera.get_pixel_format(); // TODO: simplify this
+    auto pixel_format = camera_emu.get_pixel_format(); // TODO: simplify this
     int image_format;
     if (Pylon::IsColorImage((Pylon::EPixelType)pixel_format)) {
         image_format = Pylon::PixelType_BGR8packed;
@@ -109,19 +139,20 @@ int main(int argc, char* argv[])
     }
 
     vert::ImageWriter writer(&context, 3, "D:/job_win/dev/dev_HPMVA/write_image_to");
+    vert::Camera abstract_camera(&context, image_format);
+
     writer.start();
-
-    vert::Camera camera_thread(&context, image_format);
-    camera_thread.start();
-
-    max_images > 0 ? camera.start(max_images) : camera.start();
+    abstract_camera.start();
+    camera_emu.start();
 
 
     cout << "Press Enter to stop grabbing..." << endl;
     cin.get();
-    camera.stop();
-    camera_thread.stop();
+    camera_emu.stop();
+    abstract_camera.stop();
+    writer.stop();
 
 
 
+    return 0;
 }

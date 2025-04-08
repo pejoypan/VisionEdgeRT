@@ -41,6 +41,9 @@ message(STATUS "Found ZeroMQ ${ZeroMQ_VERSION} in ${ZeroMQ_DIR}")
 find_package(spdlog REQUIRED)
 message(STATUS "Found spdlog ${spdlog_VERSION} in ${spdlog_DIR}")
 
+find_package(yaml-cpp CONFIG REQUIRED)
+message(STATUS "Found yaml-cpp ${yaml-cpp_VERSION} in ${yaml-cpp_DIR}")
+
 # include directories for libs without INTERFACE_INCLUDE_DIRECTORIES
 include_directories(${OpenCV_INCLUDE_DIRS})
 
