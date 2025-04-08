@@ -1,5 +1,5 @@
 cmake_minimum_required(VERSION 3.12)
-project(VisionEdgeRT VERSION 0.0.1 LANGUAGES CXX)
+project(VisionEdgeRT VERSION 0.1.0 LANGUAGES CXX)
 
 set(CMAKE_CXX_STANDARD 17)
 set(CMAKE_CXX_STANDARD_REQUIRED ON)
@@ -50,3 +50,17 @@ include_directories(${OpenCV_INCLUDE_DIRS})
 
 add_subdirectory(nodes)
 add_subdirectory(test)
+
+# ========== Install Targets ==========
+include(${CMAKE_CURRENT_SOURCE_DIR}/cmake/install_dlls.cmake)
+install_runtime_dlls()
+
+include(InstallRequiredSystemLibraries)
+set(CMAKE_INSTALL_SYSTEM_RUNTIME_LIBS_SKIP TRUE) 
+
+set(CPACK_RESOURCE_FILE_LICENSE "${CMAKE_CURRENT_SOURCE_DIR}/LICENSE")
+set(CPACK_PACKAGE_VERSION "${PROJECT_VERSION}")
+
+set(CPACK_GENERATOR "ZIP")
+set(CPACK_SOURCE_GENERATOR "ZIP")
+include(CPack)
