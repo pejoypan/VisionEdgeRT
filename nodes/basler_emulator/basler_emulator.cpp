@@ -116,7 +116,10 @@ bool vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
         // TODO: what if real camera exists?
         vert::register_default_events(camera_);
 
-        camera_.DeviceUserID.SetValue(cfg_.user_id.c_str());
+        if (!camera_.DeviceUserID.TrySetValue(cfg_.user_id.c_str())) {
+            vert::logger->error("Failed to set user_id: {}", cfg_.user_id);
+            return false; 
+        }
         // Disable standard test images
         camera_.TestImageSelector.SetValue(TestImageSelector_Off);
         // Enable custom test images
@@ -195,17 +198,20 @@ int vert::BaslerEmulator::get_pixel_format() const
     return Pylon::CPixelTypeMapper::GetPylonPixelTypeByName(str.c_str());
 }
 
-void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptrGrabResult)
+void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::CGrabResultPtr &ptr)
 {
-
+    vert::logger->debug("Grab from Device: {} ID: {} Size: {}x{} Type: {} Timestamp: {}",
+        cfg_.user_id, ptr->GetID(), ptr->GetWidth(), ptr->GetHeight(), vert::pixel_type_to_string(ptr->GetPixelType()), ptr->GetTimeStamp());
+        
     // Send meta
-    auto meta_data = msgpack::pack(GrabMeta{ptrGrabResult->GetID(),
-                                            ptrGrabResult->GetHeight(),
-                                            ptrGrabResult->GetWidth(),
-                                            (int)ptrGrabResult->GetPixelType(),
-                                            ptrGrabResult->GetTimeStamp(),
-                                            ptrGrabResult->GetPaddingX(),
-                                            ptrGrabResult->GetBufferSize()}); // camera name, etc
+    auto meta_data = msgpack::pack(GrabMeta{cfg_.user_id,
+                                            ptr->GetID(),
+                                            ptr->GetHeight(),
+                                            ptr->GetWidth(),
+                                            (int)ptr->GetPixelType(),
+                                            ptr->GetTimeStamp(),
+                                            ptr->GetPaddingX(),
+                                            ptr->GetBufferSize()}); // camera name, etc
 
     zmq::message_t meta_msg(meta_data.data(), meta_data.size()); // TODO: size?
     publisher_.send(meta_msg, zmq::send_flags::sndmore);
@@ -213,8 +219,8 @@ void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::
 
     // Send image
     zmq::message_t msg;
-    msg.rebuild(ptrGrabResult->GetBuffer(),
-                ptrGrabResult->GetBufferSize(),
+    msg.rebuild(ptr->GetBuffer(),
+                ptr->GetBufferSize(),
                 [](void*, void* hint) {/*deconstruction*/}, 
                 nullptr);
     publisher_.send(msg, zmq::send_flags::dontwait);

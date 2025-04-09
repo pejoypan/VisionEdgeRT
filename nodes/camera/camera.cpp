@@ -99,9 +99,9 @@ void vert::Camera::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
-    img_meta_ = MatMeta{meta.id, meta.height, meta.width, vert::pixel_type_to_cv_type(meta.pixel_type), meta.timestamp};
+    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, vert::pixel_type_to_cv_type(meta.pixel_type), meta.timestamp};
 
-    vert::logger->trace("Recv Image ID: {} Timestamp: {} ({} x {} {})", meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
+    vert::logger->debug("Recv from Device: {} Image ID: {} Timestamp: {} ({} x {} {})", meta.device_id, meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
 
 #ifdef VERT_DEBUG_WINDOW
     cv::Mat temp = cv::Mat(meta.height, meta.width, vert::pixel_type_to_cv_type(src_type), msgs[1].data()).clone();

@@ -5,6 +5,7 @@
 #include <opencv2/imgcodecs.hpp>
 #include "../third_party/msgpack.hpp"
 #include "../third_party/zmq_addon.hpp"
+#include "../third_party/fmt/format.h"
 #include "../utils/logging.h"
 #include "../utils/timer.h"
 
@@ -128,8 +129,8 @@ void vert::ImageWriter::loop_src()
         assert(*result == 2);
 
         auto meta = msgpack::unpack<vert::MatMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
-        assert(meta.type == CV_8UC1 || meta.type == CV_8UC3);
-        cv::Mat temp = cv::Mat(meta.height, meta.width, meta.type, msgs[1].data());
+        assert(meta.cv_type == CV_8UC1 || meta.cv_type == CV_8UC3);
+        cv::Mat temp = cv::Mat(meta.height, meta.width, meta.cv_type, msgs[1].data());
     
         vert::logger->trace("Recv SRC ID: {} ({} x {})", meta.id, meta.width, meta.height);
 
@@ -149,8 +150,8 @@ void vert::ImageWriter::loop_dst()
         assert(*result == 2);
     
         auto meta = msgpack::unpack<vert::MatMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
-        assert(meta.type == CV_8UC1 || meta.type == CV_8UC3);
-        cv::Mat temp = cv::Mat(meta.height, meta.width, meta.type, msgs[1].data());
+        assert(meta.cv_type == CV_8UC1 || meta.cv_type == CV_8UC3);
+        cv::Mat temp = cv::Mat(meta.height, meta.width, meta.cv_type, msgs[1].data());
     
         vert::logger->trace("Recv DST ID: {} ({} x {})", meta.id, meta.width, meta.height);
 
@@ -162,7 +163,7 @@ void vert::ImageWriter::loop_dst()
 
 void vert::ImageWriter::write(const cv::Mat &img, const MatMeta &meta)
 {
-    std::string filename = std::to_string(meta.id) + ".bmp";
+    std::string filename = fmt::format("{}_{:05d}_src.bmp", meta.device_id, meta.id);
     auto full_path = current_.rotate_paths.back() / filename;
     vert::logger->trace("Writing image: {}", full_path.string());
 
