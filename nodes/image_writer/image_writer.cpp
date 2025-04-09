@@ -19,37 +19,132 @@ namespace fs = std::filesystem;
 
 vert::SimpleTimer timer("");
 
-vert::ImageWriter::ImageWriter(zmq::context_t *ctx, int level, std::string_view root_path)
+vert::ImageWriter::ImageWriter(zmq::context_t *ctx)
     : src_subscriber_(*ctx, zmq::socket_type::sub),
       dst_subscriber_(*ctx, zmq::socket_type::sub)
 {
-    vert::logger->info("Init ImageWriter");
-    set_level(level);
-    config_.root_path = fs::path(root_path);
-
-    if (!config_.root_path.empty() && !fs::exists(config_.root_path)) {
-        fs::create_directory(config_.root_path);
-    }
-
-    config_.recycle_bin = config_.root_path / "recycle_bin";
-    if (!fs::exists(config_.recycle_bin)) {
-        fs::create_directory(config_.recycle_bin); 
-    } else {
-        // TODO: report error 
-    }
-
-    src_subscriber_.connect("inproc://#2");
-    src_subscriber_.set(zmq::sockopt::subscribe, "");
-
-    dst_subscriber_.connect("inproc://dst_image");
-    dst_subscriber_.set(zmq::sockopt::subscribe, "");
-
-    vert::logger->info("ImageWriter Inited");
 }
 
 vert::ImageWriter::~ImageWriter()
 {
     stop();
+}
+
+bool vert::ImageWriter::init(const YAML::Node &config)
+{
+    vert::logger->info("Initializing ImageWriter ...");
+    try {
+        if (!config) {
+            vert::logger->critical("Failed to init {}. Reason: node is empty", name_);
+            return false;
+        }
+        
+        if (config["name"]) {
+            name_ = config["name"].as<string>(); 
+        } else {
+            vert::logger->warn("name not provided, use default {}", name_); 
+        }
+
+        if (config["level"]) {
+            set_level(config["level"].as<string>());
+        } else {
+            vert::logger->warn("level not provided, use default {}", (int)level_);
+        }
+
+        if (config["port"]) {
+            if (config["port"]["src"]) {
+                string src_port = config["port"]["src"].as<string>();
+                vert::logger->info("src suscriber connecting to {} ...", src_port);
+                src_subscriber_.connect(src_port);
+                src_subscriber_.set(zmq::sockopt::subscribe, "");
+            } else if (level_ == ONLY_SRC || level_ == BOTH) {
+                vert::logger->error("level is {} but src port not provided", (int)level_);
+                return false;
+            }
+            if (config["port"]["dst"]) {
+                string dst_port = config["port"]["dst"].as<string>();
+                vert::logger->info("dst suscriber connecting to {}...", dst_port);
+                dst_subscriber_.connect(dst_port);
+                dst_subscriber_.set(zmq::sockopt::subscribe, "");
+            } else if (level_ == ONLY_DST || level_ == BOTH) {
+                vert::logger->error("level is {} but dst port not provided", (int)level_);
+                return false; 
+            }
+        } else if (level_on()) {
+            vert::logger->critical("Failed to init {}. Reason: level is {} but port is empty", name_, (int)level_);
+            return false; 
+        }
+
+        if (config["root_path"]) {
+            config_.root_path = fs::path(config["root_path"].as<string>());
+            if (config_.root_path.empty() && level_on()) {
+                vert::logger->critical("Failed to init {}. Reason: level is {} but root_path is empty", name_, (int)level_);
+                return false;
+            }
+
+            if (!fs::exists(config_.root_path)) {
+                fs::create_directories(config_.root_path);
+                vert::logger->info("root_path {} created", config_.root_path.string());
+            } else {
+                vert::logger->warn("root_path {} already exists", config_.root_path.string());
+            }
+            
+        } else if (level_on()) {
+            vert::logger->critical("Failed to init {}. Reason: level is {} but root_path is empty", name_, (int)level_);
+            return false;
+        }
+
+        if (config["recycle_bin"]) {
+            config_.recycle_bin = fs::path(config["recycle_bin"].as<string>());
+            if (config_.recycle_bin.empty()) {
+                config_.recycle_bin = config_.root_path / "recycle_bin";
+            }
+            
+            if (config_.recycle_bin.is_relative()) {
+                config_.recycle_bin = config_.root_path / config_.recycle_bin;
+            }
+        } else {
+            config_.recycle_bin = config_.root_path / "recycle_bin"; 
+        }
+
+        config_.recycle_bin = config_.recycle_bin.lexically_normal();
+        if (!fs::exists(config_.recycle_bin)) {
+            fs::create_directories(config_.recycle_bin);
+            vert::logger->info("recycle_bin {} created", config_.recycle_bin.string()); 
+        } else {
+            vert::logger->warn("recycle_bin {} already exists", config_.recycle_bin.string()); 
+        }
+
+        if (config["max_rotates"]) {
+            config_.max_retained_rotates = config["max_rotates"].as<size_t>(); 
+        } else {
+            vert::logger->warn("max_rotates not provided, use default {}", config_.max_retained_rotates); 
+        }
+
+        if (config["max_images"]) {
+            config_.max_image_count = config["max_images"].as<size_t>(); 
+        } else {
+            vert::logger->warn("max_images not provided, use default {}", config_.max_image_count);
+        }
+
+        if (config["max_disk_usage"]) {
+            int max_disk_usage = config["max_disk_usage"].as<int>(); // in GB
+            config_.max_image_size = max_disk_usage * 1024 * 1024 * 1024; // convert to bytes
+        } else {
+            vert::logger->warn("max_disk_usage not provided, use default {} GB", config_.max_image_size / (1024 * 1024 * 1024)); 
+        }
+
+
+    } catch (const YAML::Exception &e) {
+        vert::logger->critical("Failed to init {}. Reason: {}", name_, e.what());
+        return false; 
+    } catch (const std::exception &e) {
+        vert::logger->critical("Failed to init {}. Reason: {}", name_, e.what());
+        return false; 
+    }
+
+    vert::logger->info("ImageWriter Initialized");
+    return true;
 }
 
 void vert::ImageWriter::start()
@@ -82,13 +177,34 @@ void vert::ImageWriter::stop()
 void vert::ImageWriter::set_level(int level)
 {
     switch (level) {
-        case 0: level_ = NEITHER; break;
+        case 0: level_ = OFF; break;
         case 1: level_ = ONLY_SRC; break;
         case 2: level_ = ONLY_DST; break;
         case 3: level_ = BOTH; break;
-        default: level_ = NEITHER; break;
+        default: level_ = OFF; break;
     }
     vert::logger->info("Set level to: {}", (int)level_);
+}
+
+void vert::ImageWriter::set_level(std::string_view level)
+{
+    if (level == "off") {
+        level_ = OFF; 
+    } else if (level == "only_src") {
+        level_ = ONLY_SRC; 
+    } else if (level == "only_dst") {
+        level_ = ONLY_DST; 
+    } else if (level == "both") {
+        level_ = BOTH; 
+    } else {
+        level_ = OFF;
+    }
+    vert::logger->info("Set level to: {}", (int)level_);
+}
+
+void vert::ImageWriter::set_root_path(std::string_view path)
+{
+    config_.root_path = path;
 }
 
 void vert::ImageWriter::rotate()

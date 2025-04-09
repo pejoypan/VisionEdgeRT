@@ -21,3 +21,15 @@ basler_emulator:
   fps: 10.0
   pixel_format: BGR8Packed # Mono8, BGR8Packed, RGB8Packed, BayerGR8, BayerRG8, BayerGB8, BayerBG8
 
+image_writer:
+  name: "ImageWriter#0"
+  level: both # off, only_src, only_dst, both
+  port:
+    src: "inproc://#2"
+    dst: "inproc://dst"
+  root_path: "D:/image_data/test_write_to"
+  recycle_bin: ""
+  max_rotates: 10
+  max_images: 99999 # per rotate
+  max_disk_usage: 100 # GB
+

@@ -5,6 +5,7 @@ add_executable(test_image_writer
 )
 target_link_libraries(test_image_writer
     libzmq
+    yaml-cpp::yaml-cpp
     vert_utils
     image_writer
 )

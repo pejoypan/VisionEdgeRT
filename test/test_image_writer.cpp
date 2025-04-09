@@ -12,7 +12,9 @@ int main(int argc, char **argv) {
     fs::path test_root = fs::temp_directory_path() / "image_writer_test";
     fs::create_directory(test_root);
     zmq::context_t context(0);
-    vert::ImageWriter writer(&context, 3, test_root.string());
+    vert::ImageWriter writer(&context);
+    writer.set_level(3);
+    writer.set_root_path(test_root.string());
 
 #ifdef VERT_ENABLE_TEST
     writer.test();

@@ -9,6 +9,7 @@
 #include <queue>
 #include <tuple>
 #include <opencv2/core.hpp>
+#include <yaml-cpp/yaml.h>
 #include "../utils/types.h"
 #include "../third_party/zmq.hpp"
 
@@ -37,20 +38,25 @@ namespace vert {
         };
 
         enum Level {
-            NEITHER = 0,
+            OFF = 0,
             ONLY_SRC,
             ONLY_DST,
             BOTH
         };
 
     public:
-        ImageWriter(zmq::context_t *ctx, int level, std::string_view root_path);
+        ImageWriter(zmq::context_t *ctx);
         ~ImageWriter();
+
+        bool init(const YAML::Node& config);
 
         void start();
         void stop();
 
         void set_level(int level);
+        void set_level(std::string_view level);
+
+        void set_root_path(std::string_view path);
 
         bool is_running() const {return is_running_.load();}
 
@@ -74,6 +80,8 @@ namespace vert {
         void remove_folder(const std::filesystem::path &folder_path);
 
         void remove_file(const std::filesystem::path &file_path);
+
+        bool level_on() const {return level_ != Level::OFF;}
         
         zmq::socket_t src_subscriber_;
         zmq::socket_t dst_subscriber_;
@@ -83,11 +91,12 @@ namespace vert {
         std::thread src_thread_;
         std::thread dst_thread_;
 
-        Level level_ = Level::NEITHER;
+        Level level_ = Level::OFF;
 
         ImageWriterConfig config_;
         ImageWriterState current_;
 
+        std::string name_ = "ImageWriter";
 
     };
 

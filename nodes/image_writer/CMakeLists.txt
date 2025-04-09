@@ -7,6 +7,7 @@ target_include_directories(image_writer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # le
 
 target_link_libraries(image_writer PRIVATE 
     ${OpenCV_LIBS}
+    yaml-cpp::yaml-cpp
     libzmq
     vert_utils
 )
