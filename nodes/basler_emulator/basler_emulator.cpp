@@ -87,7 +87,11 @@ bool vert::BaslerEmulator::init(const YAML::Node &config)
     } catch (const YAML::Exception& e) {
         vert::logger->critical("Failed to init '{}'. Reason: {}", name_, e.what());
         return false; 
+    } catch (const std::exception& e) {
+        vert::logger->critical("Failed to init '{}'. Reason: {}", name_, e.what());
+        return false; 
     }
+
     vert::logger->info("BaslerEmulator Inited");
 
     return true;
@@ -138,6 +142,10 @@ bool vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
     }
     catch (const Pylon::GenericException& e)
     {
+        vert::logger->error("Failed to open camera. Reason: {}", e.what());
+        return false;
+    }
+    catch (const std::exception& e) {
         vert::logger->error("Failed to open camera. Reason: {}", e.what());
         return false;
     }
