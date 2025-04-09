@@ -5,7 +5,7 @@ add_library(camera SHARED
 
 target_include_directories(camera PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # let others directly include header files
 
-target_link_libraries(camera PRIVATE 
+target_link_libraries(camera PUBLIC 
     pylon::pylon
     ${OpenCV_LIBS}
     libzmq

@@ -3,10 +3,7 @@ project(test_image_writer)
 add_executable(test_image_writer
     test_image_writer.cpp
 )
-target_link_libraries(test_image_writer
-    libzmq
-    yaml-cpp::yaml-cpp
-    vert_utils
+target_link_libraries(test_image_writer PRIVATE
     image_writer
 )
 

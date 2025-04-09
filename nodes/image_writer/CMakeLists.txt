@@ -5,7 +5,7 @@ image_writer.cpp)
 
 target_include_directories(image_writer PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # let others directly include header files
 
-target_link_libraries(image_writer PRIVATE 
+target_link_libraries(image_writer PUBLIC 
     ${OpenCV_LIBS}
     yaml-cpp::yaml-cpp
     libzmq

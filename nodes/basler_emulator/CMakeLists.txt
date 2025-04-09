@@ -5,7 +5,7 @@ add_library(basler_emulator SHARED
 
 target_include_directories(basler_emulator PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # let others directly include header files
 
-target_link_libraries(basler_emulator PRIVATE 
+target_link_libraries(basler_emulator PUBLIC 
     pylon::pylon
     yaml-cpp::yaml-cpp
     libzmq

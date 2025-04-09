@@ -13,7 +13,6 @@ target_link_libraries(VERT PRIVATE
     libzmq
     spdlog::spdlog
     $<$<BOOL:${MINGW}>:ws2_32>
-    ${OpenCV_LIBS}
     yaml-cpp::yaml-cpp
     vert_utils  
     basler_emulator
