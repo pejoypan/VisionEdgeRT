@@ -117,19 +117,22 @@ bool vert::ImageWriter::init(const YAML::Node &config)
 
         if (config["max_rotates"]) {
             config_.max_retained_rotates = config["max_rotates"].as<size_t>(); 
+            vert::logger->info("max_rotates set to {}", config_.max_retained_rotates);
         } else {
             vert::logger->warn("max_rotates not provided, use default {}", config_.max_retained_rotates); 
         }
 
         if (config["max_images"]) {
             config_.max_image_count = config["max_images"].as<size_t>(); 
+            vert::logger->info("max_images set to {}", config_.max_image_count);
         } else {
             vert::logger->warn("max_images not provided, use default {}", config_.max_image_count);
         }
 
         if (config["max_disk_usage"]) {
-            int max_disk_usage = config["max_disk_usage"].as<int>(); // in GB
+            size_t max_disk_usage = config["max_disk_usage"].as<int>(); // in GB
             config_.max_image_size = max_disk_usage * 1024 * 1024 * 1024; // convert to bytes
+            vert::logger->info("max_disk_usage set to {}", config_.max_image_size);
         } else {
             vert::logger->warn("max_disk_usage not provided, use default {} GB", config_.max_image_size / (1024 * 1024 * 1024)); 
         }
