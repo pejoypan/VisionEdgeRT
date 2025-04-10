@@ -8,52 +8,52 @@ void Pylon::ConfigEvents::OnAttach(CInstantCamera &)
 
 void Pylon::ConfigEvents::OnAttached(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Attached", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Attached", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnOpen(CInstantCamera &camera)
 {
-    vert::logger->info("Opening... <{}>", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("Opening... {}", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnOpened(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Opened", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Opened", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnGrabStart(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Grab Starting...", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Grab Starting...", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnGrabStarted(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Grab Started", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Grab Started", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnGrabStop(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Grab Stopping...", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Grab Stopping...", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnGrabStopped(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Grab Stopped", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Grab Stopped", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnClose(CInstantCamera &camera)
 {
-    vert::logger->info("Closing... <{}>", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("Closing... {}", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnClosed(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Closed", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Closed", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnDestroy(CInstantCamera &camera)
 {
-    vert::logger->info("Destroying... <{}>", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("Destroying... {}", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnDestroyed(CInstantCamera &)
@@ -63,32 +63,32 @@ void Pylon::ConfigEvents::OnDestroyed(CInstantCamera &)
 
 void Pylon::ConfigEvents::OnDetach(CInstantCamera &camera)
 {
-    vert::logger->info("Detaching... <{}>", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("Detaching... {}", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnDetached(CInstantCamera &camera)
 {
-    vert::logger->info("<{}> Detached", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->info("{} Detached", vert::brief_info(camera));
 }
 
 void Pylon::ConfigEvents::OnGrabError(CInstantCamera &camera, const char *errorMessage)
 {
-    vert::logger->error("<{}> Grab Error: {}", camera.GetDeviceInfo().GetModelName().c_str(), errorMessage);
+    vert::logger->error("{} Grab Error: {}", vert::brief_info(camera), errorMessage);
 }
 
 void Pylon::ConfigEvents::OnCameraDeviceRemoved(CInstantCamera &camera)
 {
-    vert::logger->warn("<{}> Camera Device Removed", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->warn("{} Camera Device Removed", vert::brief_info(camera));
 }
 
 void Pylon::ImageEvents::OnImagesSkipped(CInstantCamera &camera, size_t countOfSkippedImages)
 {
-    vert::logger->error("<{}> {} Images Skipped", camera.GetDeviceInfo().GetModelName().c_str(), countOfSkippedImages);
+    vert::logger->error("{} {} Images Skipped", vert::brief_info(camera), countOfSkippedImages);
 }
 
 void Pylon::ImageEvents::OnImageGrabbed(CInstantCamera &camera, const CGrabResultPtr &ptrGrabResult)
 {
-    vert::logger->trace("<{}> Image Grabbed: ", camera.GetDeviceInfo().GetModelName().c_str());
+    vert::logger->trace("{} Image Grabbed: ", vert::brief_info(camera));
 
     // Image grabbed successfully?
     if (ptrGrabResult->GrabSucceeded()) {
@@ -105,22 +105,22 @@ void Pylon::ImageEvents::OnImageGrabbed(CInstantCamera &camera, const CGrabResul
 
 void Pylon::CameraEvents::OnCameraEvent(CBaslerUniversalInstantCamera &camera, intptr_t userProvidedId, GenApi::INode *pNode)
 {
-    vert::logger->trace("<{}> OnCameraEvent, ID: {} Name: {}", camera.GetDeviceInfo().GetModelName().c_str(), userProvidedId, pNode->GetName().c_str());
+    vert::logger->trace("{} OnCameraEvent, ID: {} Name: {}", vert::brief_info(camera), userProvidedId, pNode->GetName().c_str());
 
     switch (userProvidedId)
     {
     case vert::CameraEventsEnum::ExposureEnd:
-        if (camera.EventExposureEndFrameID.IsReadable()) {  // Applies to cameras based on SFNC 2.0 or later, e.g, USB cameras
-            vert::logger->trace("Exposure End. FrameID: {} Timestamp: {}", camera.EventExposureEndFrameID.GetValue(), camera.EventExposureEndTimestamp.GetValue());
-        } else {
-            vert::logger->trace("Exposure End. FrameID: {} Timestamp: {}", camera.ExposureEndEventFrameID.GetValue(), camera.ExposureEndEventTimestamp.GetValue());
-        }
+        vert::logger->trace("Exposure End. FrameID: {} Timestamp: {}", 
+            camera.EventExposureEndFrameID.IsReadable() ? camera.EventExposureEndFrameID.GetValue() : camera.ExposureEndEventFrameID.GetValue(), 
+            camera.EventExposureEndTimestamp.IsReadable() ? camera.EventExposureEndTimestamp.GetValue() : camera.ExposureEndEventTimestamp.GetValue());
         break;
     
     case vert::CameraEventsEnum::FrameStart:
-        if (camera.EventFrameStartFrameID.IsReadable()) {  // Applies to cameras based on SFNC 2.0 or later, e.g, USB cameras
-            vert::logger->trace("Frame Start. FrameID: {} Timestamp: {}", camera.EventFrameStartFrameID.GetValue(), camera.EventFrameStartTimestamp.GetValue());
-        }
+        vert::logger->trace("Frame Start. FrameID: {} Timestamp: {}", 
+            camera.EventFrameStartFrameID.IsReadable() ? camera.EventFrameStartFrameID.GetValue() : -1, 
+            camera.EventFrameStartTimestamp.IsReadable() ? camera.EventFrameStartTimestamp.GetValue() : camera.FrameStartEventTimestamp.GetValue());
+        break;
+
     default:
         vert::logger->error("Unknown event.");
         break;
@@ -171,7 +171,7 @@ bool vert::set_pixel_format(Pylon::CBaslerUniversalInstantCamera &camera, std::s
         }
     }
 
-    vert::logger->error("<{}> doesn't support Pixel Format: {}", camera.GetDeviceInfo().GetModelName().c_str(), format.data());
+    vert::logger->error("{} doesn't support Pixel Format: {}", vert::brief_info(camera), format.data());
 
     auto gen_supported_str = [&supported](){
         std::string message;
@@ -202,7 +202,7 @@ void vert::register_default_events(Pylon::CBaslerUniversalInstantCamera &camera)
 
     // Check if the device supports events.
     if (!camera.EventSelector.IsWritable()) {
-        vert::logger->warn("<{}> doesn't support camera events.", camera.GetDeviceInfo().GetModelName().c_str());
+        vert::logger->warn("{} doesn't support camera events.", vert::brief_info(camera));
     } else {
         // Cameras based on SFNC 2.0 or later, e.g., USB cameras
         std::string ExposureEndName, FrameStartName;

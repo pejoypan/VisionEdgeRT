@@ -94,7 +94,7 @@ bool vert::BaslerEmulator::init(const YAML::Node &config)
 
     vert::logger->info("BaslerEmulator Inited");
 
-    return true;
+    return create_and_open();
 }
 
 bool vert::BaslerEmulator::is_open() const
@@ -107,13 +107,13 @@ bool vert::BaslerEmulator::is_grabbing() const
     return camera_.IsGrabbing();
 }
 
-bool vert::BaslerEmulator::open(const Pylon::CDeviceInfo &deviceInfo)
+bool vert::BaslerEmulator::create_and_open()
 {
     // TODO: mutex ?
     try {
-
-        Pylon::IPylonDevice* pDevice = Pylon::CTlFactory::GetInstance().CreateDevice( deviceInfo );
-        camera_.Attach( pDevice, Pylon::Cleanup_Delete );
+        Pylon::CDeviceInfo di;
+        di.SetDeviceClass(Pylon::BaslerCamEmuDeviceClass);
+        camera_.Attach( Pylon::CTlFactory::GetInstance().CreateFirstDevice(di), Pylon::Cleanup_Delete );
 
         // DON'T open camera before register
         
@@ -221,7 +221,7 @@ void vert::BaslerEmulator::OnImageGrabbed(Pylon::CInstantCamera &, const Pylon::
                                             ptr->GetPaddingX(),
                                             ptr->GetBufferSize()}); // camera name, etc
 
-    zmq::message_t meta_msg(meta_data.data(), meta_data.size()); // TODO: size?
+    zmq::message_t meta_msg(meta_data.data(), meta_data.size());
     publisher_.send(meta_msg, zmq::send_flags::sndmore);
 
 

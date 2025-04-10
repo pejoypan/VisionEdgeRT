@@ -128,9 +128,46 @@ namespace vert
         return message.str(); 
     }
 
+    inline std::string brief_info(const Pylon::CInstantCamera &camera) {
+        std::stringstream message;
+        auto& info = camera.GetDeviceInfo();
+        message << (info.IsModelNameAvailable() ? info.GetModelName() : "unknown")
+                << "(" << (info.IsSerialNumberAvailable()? info.GetSerialNumber() : "nan") << ")"
+                << "'" << (info.IsUserDefinedNameAvailable()? info.GetUserDefinedName() : "") << "'";
+        
+        return message.str();
+    }
+
+    inline std::string get_device_info(const Pylon::CDeviceInfo &info) {
+        std::stringstream message;
+        message << "====================\n"
+                << "Vendor   : " << (info.IsVendorNameAvailable() ? info.GetVendorName() : "") << "\n"
+                << "Model    : " << (info.IsModelNameAvailable() ? info.GetModelName() : "") << "\n"
+                << "S/N      : " << (info.IsSerialNumberAvailable()? info.GetSerialNumber() : "") << "\n"
+                << "User ID  : " << (info.IsUserDefinedNameAvailable() ? info.GetUserDefinedName() : "") << "\n"
+                << "====================\n";
+
+        return message.str();
+    }
+
     void register_default_events(Pylon::CBaslerUniversalInstantCamera &camera); 
 
     bool set_image_filename(Pylon::CBaslerUniversalInstantCamera &camera, std::string_view filename); 
+
+    template<typename Fn>
+    void enumerate_devices(Fn&& handler) {
+        Pylon::CTlFactory& tl_factory = Pylon::CTlFactory::GetInstance();
+        Pylon::DeviceInfoList_t devices;
+        tl_factory.EnumerateDevices(devices);
+        if (!devices.empty()) {
+            vert::logger->info("Found {} devices:", devices.size());
+            for (const auto& device : devices) {
+                handler(device);
+            }
+        } else {
+            vert::logger->critical("No devices found.");
+        }
+    }
 
 } // namespace vert
 

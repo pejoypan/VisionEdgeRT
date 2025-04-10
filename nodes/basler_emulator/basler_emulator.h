@@ -30,7 +30,7 @@ namespace vert {
         bool is_open() const;
         bool is_grabbing() const;
 
-        bool open( const Pylon::CDeviceInfo& deviceInfo );
+        bool create_and_open();
         void close();
 
         void start();

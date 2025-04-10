@@ -11,9 +11,6 @@ namespace vert
 #ifdef VERT_DISABLE_TIMING
 class SimpleTimer
 {
-/*
-    TODO: disable at release
-*/
 
 public:
     SimpleTimer(const std::string &) {}

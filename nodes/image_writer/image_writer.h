@@ -13,9 +13,6 @@
 #include "../utils/types.h"
 #include "../third_party/zmq.hpp"
 
-/*
-TODO: use fmt for filename
-*/
 
 
 

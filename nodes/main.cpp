@@ -7,6 +7,7 @@
 #include "third_party/zmq.hpp"
 #include "third_party/cxxopts.hpp"
 #include "utils/logging.h"
+#include "utils/pylon_utils.h"
 
 #include "basler_emulator.h"
 #include "camera_adapter.h"
@@ -118,13 +119,13 @@ int main(int argc, char* argv[])
     Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
     
     zmq::context_t context(0);
+   
+    vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
+        vert::logger->info("\n{}", vert::get_device_info(device));
+    });
+
     vert::BaslerEmulator camera_emu(&context);
     if (!camera_emu.init(config["basler_emulator"])) {
-        return 1;
-    }
-
-    Pylon::CDeviceInfo devInfo;
-    if (!camera_emu.open(devInfo)) {
         return 1;
     }
 
