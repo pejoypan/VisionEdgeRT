@@ -5,6 +5,7 @@
 #include <thread>
 #include <mutex>
 #include <pylon/PylonIncludes.h>
+#include <yaml-cpp/yaml.h>
 #include "../utils/types.h"
 #include "../third_party/zmq.hpp"
 
@@ -12,7 +13,7 @@
     TODO:
     - compare converter performance: pylon thread num, opencv VNG, opencv EdgeAware
     - mutex necessary? recv, get_curr_image, display, convert
-    - use opencv bayer demosaicing color incorrect @ file mode
+    - BUG using opencv demosaicing (change to RGB can fix)
     - LATER: need recv and send split to 2 threads?
 */
 
@@ -26,16 +27,28 @@ namespace vert {
             EdgeAware = 2  // Edge-Aware Demosaicing, slowest but best
         };
 
+        enum ConverterChoice {
+            Pylon = 0,
+            OpenCV = 1 
+        };
+
+        struct CameraAdapterConfig {
+            int pylon_thread_num = 1;
+            CameraAdapter::DemosaicingFlag cv_demosacing_flag = CameraAdapter::DemosaicingFlag::Bilinear;
+            CameraAdapter::ConverterChoice converter_choice = CameraAdapter::ConverterChoice::Pylon;
+        };
+
     public:
-        CameraAdapter(zmq::context_t *ctx, int _dst_type);
+        CameraAdapter(zmq::context_t *ctx);
         ~CameraAdapter();
+
+        bool init(const YAML::Node &config);
 
         void start();
         void stop();
         cv::Mat get_curr_image() const;
         bool is_running() const {return is_running_.load();}
 
-        void set_demosacing_flag(int flag) {CV_DEMOSAICING_FLAG_ = flag;}
 
     private:
         void loop();
@@ -56,6 +69,10 @@ namespace vert {
 
         bool use_pylon_converter(Pylon::EPixelType from) const;
 
+        int get_output_cv_type(Pylon::EPixelType from) const;
+
+        Pylon::EPixelType get_output_pylon_type(Pylon::EPixelType from) const;
+
         zmq::socket_t publisher_;
         zmq::socket_t subscriber_;
 
@@ -69,13 +86,12 @@ namespace vert {
 
         MatMeta img_meta_;
 
-        int CV_DEMOSAICING_FLAG_ = Bilinear;
-
-        Pylon::EPixelType dst_type_ = Pylon::EPixelType::PixelType_Undefined;
         Pylon::EImageOrientation src_orientation_ = Pylon::ImageOrientation_TopDown; // we assume it's top down
 
         Pylon::CImageFormatConverter converter_;
         Pylon::CPylonImage pylon_image_;
+
+        CameraAdapterConfig cfg_;
 
         std::string name_ = "CameraAdapter";
     };

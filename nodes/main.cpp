@@ -128,22 +128,15 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    auto pixel_format = camera_emu.get_pixel_format(); // TODO: simplify this
-    int image_format;
-    if (Pylon::IsColorImage((Pylon::EPixelType)pixel_format)) {
-        image_format = Pylon::PixelType_BGR8packed;
-    } else if (Pylon::IsMonoImage((Pylon::EPixelType)pixel_format)) {
-        image_format = Pylon::PixelType_Mono8; 
-    } else {
-        vert::logger->error("unsupported pixel format");
-    }
-
     vert::ImageWriter writer(&context);
     if (!writer.init(config["image_writer"])) {
         return 1;
     }
 
-    vert::CameraAdapter camera_adapter(&context, image_format);
+    vert::CameraAdapter camera_adapter(&context);
+    if (!camera_adapter.init(config["camera_adapter"])) {
+        return 1;
+    }
 
     writer.start();
     camera_adapter.start();

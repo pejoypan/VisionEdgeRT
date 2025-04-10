@@ -5,6 +5,7 @@
 #include "../third_party/msgpack.hpp"
 #include "../third_party/zmq_addon.hpp"
 #include "../utils/pylon_utils.h"
+#include "../utils/cv_utils.h"
 #include "../utils/logging.h"
 
 using namespace std;
@@ -13,33 +14,109 @@ using namespace std;
 #define WINDOW_NAME_SRC "recv src"
 // #define VERT_DEBUG_WINDOW
 
-vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx, int _dst_type)
+vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx)
     : publisher_(*ctx, zmq::socket_type::pub),
-      subscriber_(*ctx, zmq::socket_type::sub),
-      dst_type_(static_cast<Pylon::EPixelType>(_dst_type))
+      subscriber_(*ctx, zmq::socket_type::sub)
 {
-    vert::logger->info("Init Abstract Camera");
-    subscriber_.connect("inproc://#1");
-    subscriber_.set(zmq::sockopt::subscribe, "");
-
-    publisher_.bind("inproc://#2");
-    
-    if (converter_.IsSupportedOutputFormat(dst_type_))
-        converter_.OutputPixelFormat = dst_type_;
-    else {
-        vert::logger->error("pylon converter doesn't support {}", vert::pixel_type_to_string(dst_type_));
-    }
-
     converter_.OutputOrientation = Pylon::OutputOrientation_Unchanged;
-    // converter_.OutputBitAlignment = Pylon::OutputBitAlignment_MsbAligned;
     converter_.MaxNumThreads = 1;
-    // converter.MaxNumThreads.TrySetToMaximum();
-    vert::logger->info("Abstract Camera Inited");
 }
 
 vert::CameraAdapter::~CameraAdapter()
 {
     stop();
+}
+
+bool vert::CameraAdapter::init(const YAML::Node &config)
+{
+    vert::logger->info("Initializing CameraAdapter ...");
+
+    try {
+        if (!config) {
+            vert::logger->critical("Failed to init CameraAdapter. Reason: config is empty");
+            return false; 
+        }
+
+        if (config["name"]) {
+            name_ = config["name"].as<string>(); 
+        } else {
+            vert::logger->warn("name not provided.");
+        }
+
+        if (config["port"]) {
+
+            if (config["port"]["from"]) {
+                string address = config["port"]["from"].as<string>();
+                subscriber_.connect(address);
+                subscriber_.set(zmq::sockopt::subscribe, "");
+                vert::logger->info("{} subscriber connected to {}", name_, address);
+            } else {
+                vert::logger->critical("Failed to init '{}'. Reason: port.from is empty", name_);
+                return false;
+            }
+
+            if (config["port"]["to"]) {
+                string address = config["port"]["to"].as<string>();
+                publisher_.bind(address);
+                vert::logger->info("{} publisher bind to {}", name_, address);
+            } else {
+                vert::logger->critical("Failed to init '{}'. Reason: port.to is empty", name_);
+                return false;
+            }
+
+        } else {
+            vert::logger->critical("Failed to init '{}'. Reason: port is empty", name_);
+            return false; 
+        }
+
+        if (config["converter"]) {
+
+            if (config["converter"]["use"]) {
+                auto choice = config["converter"]["use"].as<string>();
+                choice = vert::to_lower(choice);
+                if (choice == "pylon") {
+                    cfg_.converter_choice = ConverterChoice::Pylon; 
+                } else if (choice == "opencv") {
+                    cfg_.converter_choice = ConverterChoice::OpenCV; 
+                } else {
+                    vert::logger->warn("unknown converter.use {}, use default {}", choice, (int)cfg_.converter_choice); 
+                }
+            } else {
+                vert::logger->warn("converter.use not provided, use default {}", (int)cfg_.converter_choice); 
+            }
+
+            if (cfg_.converter_choice == ConverterChoice::Pylon) {
+                if (config["converter"]["num_threads"] && config["converter"]["num_threads"].as<int>() > 0) {
+                    cfg_.pylon_thread_num = config["converter"]["num_threads"].as<int>();
+                }
+                converter_.MaxNumThreads.TrySetValue(cfg_.pylon_thread_num);
+                vert::logger->info("converter.MaxNumThreads set to {}", converter_.MaxNumThreads.GetValue());
+            } else if (cfg_.converter_choice == ConverterChoice::OpenCV) {
+                if (config["converter"]["demosaicing_flag"]) {
+                    int flag = config["converter"]["demosaicing_flag"].as<int>();
+                    if (flag >= 0 && flag <= 2) {
+                        cfg_.cv_demosacing_flag = (DemosaicingFlag)flag; 
+                    }
+                }
+                vert::logger->info("converter.demosacing_flag set to {}", (int)cfg_.cv_demosacing_flag);
+            } else {
+
+            }
+
+        } else {
+            vert::logger->warn("converter not provided, use default {}", (int)cfg_.converter_choice);
+        }
+
+    } catch (const YAML::Exception& e) {
+        vert::logger->critical("Failed to init {}. Reason: {}", name_, e.what());
+        return false;
+    } catch (const std::exception& e) {
+        vert::logger->critical("Failed to init {}. Reason: {}", name_, e.what());
+        return false;
+    }
+
+    vert::logger->info("CameraAdapter '{}' Inited", name_);
+    return true;
 }
 
 void vert::CameraAdapter::start()
@@ -99,7 +176,7 @@ void vert::CameraAdapter::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
-    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, vert::pixel_type_to_cv_type(meta.pixel_type), meta.timestamp};
+    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, get_output_cv_type(src_type), meta.timestamp};
 
     vert::logger->debug("Recv from Device: {} Image ID: {} Timestamp: {} ({} x {} {})", meta.device_id, meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
 
@@ -108,6 +185,7 @@ void vert::CameraAdapter::recv()
     cv::imshow(WINDOW_NAME_SRC, temp);
 #endif
 
+    vert::logger->debug("{} ---convert--> {}", vert::pixel_type_to_string(src_type), vert::cv_type_to_str(img_meta_.cv_type));
     convert(msgs[1].data(), meta, src_type);
 
 }
@@ -143,6 +221,10 @@ void vert::CameraAdapter::cv_convert(void *buffer, const vert::GrabMeta &meta, P
 
 void vert::CameraAdapter::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
+    Pylon::EPixelType dst_type = get_output_pylon_type(src_type);
+    assert(converter_.IsSupportedOutputFormat(dst_type));
+    converter_.OutputPixelFormat = dst_type;
+
     if (converter_.ImageHasDestinationFormat(src_type, meta.padding_x, src_orientation_)) {
         int src_cv_type = vert::pixel_type_to_cv_type(src_type);
         assert(src_cv_type != -1);
@@ -164,12 +246,12 @@ void vert::CameraAdapter::pylon_convert(void *buffer, const vert::GrabMeta &meta
 
 void vert::CameraAdapter::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
-    vert::logger->trace("{} ---convert--> {}", vert::pixel_type_to_string(src_type), vert::pixel_type_to_string(dst_type_));
-
-    if (use_pylon_converter(src_type)) {
+    if (cfg_.converter_choice == ConverterChoice::Pylon) {
         pylon_convert(buffer, meta, src_type);
-    } else {
+    } else if (cfg_.converter_choice == ConverterChoice::OpenCV) {
         cv_convert(buffer, meta, src_type);
+    } else {
+        assert(false);
     }
 }
 
@@ -189,56 +271,25 @@ void vert::CameraAdapter::send()
     img_msg.rebuild(img_cvt_.data ,img_cvt_.total() * img_cvt_.elemSize());
     publisher_.send(img_msg, zmq::send_flags::dontwait);
 
-    vert::logger->trace("Publish: [meta {} bytes, image {} bytes]", meta_msg.size(), img_msg.size());
+    vert::logger->debug("Send Image Device_ID: {} ID: {} Size: {}x{} Type: {}", img_meta_.device_id, img_meta_.id, img_meta_.width, img_meta_.height, vert::cv_type_to_str(img_meta_.cv_type));
 }
 
 int vert::CameraAdapter::get_bayer_code(Pylon::EPixelType from) const
 {
-    switch (from)
-    {
-    case Pylon::PixelType_BayerRG8:
-        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
-            return cv::COLOR_BayerRG2BGR; 
-        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
-            return cv::COLOR_BayerRG2BGR_VNG; 
-        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
-            return cv::COLOR_BayerRG2BGR_EA; 
-        } else {
-            return cv::COLOR_BayerRG2BGR;
-        }
-    case Pylon::PixelType_BayerGR8:
-        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
-            return cv::COLOR_BayerGR2BGR; 
-        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
-            return cv::COLOR_BayerGR2BGR_VNG; 
-        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
-            return cv::COLOR_BayerGR2BGR_EA;
-        } else {
-            return cv::COLOR_BayerGR2BGR;
-        }
-    case Pylon::PixelType_BayerBG8:
-        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
-            return cv::COLOR_BayerBG2BGR; 
-        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
-            return cv::COLOR_BayerBG2BGR_VNG; 
-        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
-            return cv::COLOR_BayerBG2BGR_EA; 
-        } else {
-            return cv::COLOR_BayerBG2BGR; 
-        }
-    case Pylon::PixelType_BayerGB8:
-        if (CV_DEMOSAICING_FLAG_ == Bilinear) {
-            return cv::COLOR_BayerGB2BGR; 
-        } else if (CV_DEMOSAICING_FLAG_ == VNG) {
-            return cv::COLOR_BayerGB2BGR_VNG; 
-        } else if (CV_DEMOSAICING_FLAG_ == EdgeAware) {
-            return cv::COLOR_BayerGB2BGR_EA;
-        } else {
-            return cv::COLOR_BayerGB2BGR;
-        }
-    default:
-        return -1;
+    static const std::unordered_map<Pylon::EPixelType, std::array<int, 3>> bayer_table = {
+        {Pylon::PixelType_BayerRG8, {cv::COLOR_BayerRG2BGR, cv::COLOR_BayerRG2BGR_VNG, cv::COLOR_BayerRG2BGR_EA}},
+        {Pylon::PixelType_BayerGR8, {cv::COLOR_BayerGR2BGR, cv::COLOR_BayerGR2BGR_VNG, cv::COLOR_BayerGR2BGR_EA}},
+        {Pylon::PixelType_BayerBG8, {cv::COLOR_BayerBG2BGR, cv::COLOR_BayerBG2BGR_VNG, cv::COLOR_BayerBG2BGR_EA}},
+        {Pylon::PixelType_BayerGB8, {cv::COLOR_BayerGB2BGR, cv::COLOR_BayerGB2BGR_VNG, cv::COLOR_BayerGB2BGR_EA}}
+    };
+
+    auto it = bayer_table.find(from);
+    if (it != bayer_table.end()) {
+        int index = (int)cfg_.cv_demosacing_flag;
+        return it->second[index];
     }
+
+    return -1;
 }
 
 bool vert::CameraAdapter::use_pylon_converter(Pylon::EPixelType from) const
@@ -251,4 +302,26 @@ bool vert::CameraAdapter::use_pylon_converter(Pylon::EPixelType from) const
         Pylon::IsRGB(from) ||
         Pylon::IsRGBPacked(from)
     );
+}
+
+int vert::CameraAdapter::get_output_cv_type(Pylon::EPixelType from) const
+{
+    if (Pylon::IsMonoImage(from)) {
+        return CV_8UC1; 
+    } else if (Pylon::IsColorImage(from)) {
+        return CV_8UC3;
+    } else {
+        return -1; 
+    }
+}
+
+Pylon::EPixelType vert::CameraAdapter::get_output_pylon_type(Pylon::EPixelType from) const
+{
+    if (Pylon::IsMonoImage(from)) {
+        return Pylon::PixelType_Mono8; 
+    } else if (Pylon::IsColorImage(from)) {
+        return Pylon::PixelType_BGR8packed; 
+    } else {
+        return Pylon::PixelType_Undefined;
+    }
 }

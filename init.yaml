@@ -21,6 +21,16 @@ basler_emulator:
   fps: 10.0
   pixel_format: BGR8Packed # Mono8, BGR8Packed, RGB8Packed, BayerGR8, BayerRG8, BayerGB8, BayerBG8
 
+camera_adapter:
+  name: "CameraAdapter#0"
+  port:
+    from: "inproc://#1"
+    to: "inproc://#2"
+  converter:
+    use: pylon # pylon, opencv
+    num_threads: 1 # for pylon converter only
+    demosaicing_flag: 0 # {0: Bilinear, 1: Variable Number of Gradients, 2: Edge-Aware}, for opencv converter only
+
 image_writer:
   name: "ImageWriter#0"
   level: both # off, only_src, only_dst, both

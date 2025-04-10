@@ -9,6 +9,7 @@ target_link_libraries(camera_adapter PUBLIC
     pylon::pylon
     ${OpenCV_LIBS}
     libzmq
+    yaml-cpp::yaml-cpp
     vert_utils
 )
 

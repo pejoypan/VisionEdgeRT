@@ -5,6 +5,7 @@ add_library(vert_utils SHARED
     src/pylon_utils.cpp
     src/timer.cpp
     src/string_utils.cpp
+    src/cv_utils.cpp
 )
 
 if (MSVC)
