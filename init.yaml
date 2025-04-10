@@ -39,6 +39,7 @@ image_writer:
     dst: "inproc://dst"
   root_path: "D:/image_data/test_write_to"
   recycle_bin: ""
+  format: bmp # bmp, jpg, png
   max_rotates: 10
   max_images: 99999 # per rotate
   max_disk_usage: 100 # GB

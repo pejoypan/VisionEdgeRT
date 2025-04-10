@@ -117,7 +117,6 @@ bool vert::BaslerEmulator::create_and_open()
 
         // DON'T open camera before register
         
-        // TODO: what if real camera exists?
         vert::register_default_events(camera_);
 
         if (!camera_.DeviceUserID.TrySetValue(cfg_.user_id.c_str())) {

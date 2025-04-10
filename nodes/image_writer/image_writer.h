@@ -72,7 +72,7 @@ namespace vert {
 
         void loop_dst();
 
-        void write(const cv::Mat &img, const MatMeta &meta);
+        void write(const cv::Mat &img, const MatMeta &meta, std::string_view pattern);
 
         void remove_folder(const std::filesystem::path &folder_path);
 
@@ -94,6 +94,8 @@ namespace vert {
         ImageWriterState current_;
 
         std::string name_ = "ImageWriter";
+        std::string src_pattern_ = "{}_{:05d}_src.";
+        std::string dst_pattern_ = "{}_{:05d}_dst.";
 
     };
 

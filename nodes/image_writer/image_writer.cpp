@@ -107,6 +107,24 @@ bool vert::ImageWriter::init(const YAML::Node &config)
             config_.recycle_bin = config_.root_path / "recycle_bin"; 
         }
 
+        if (config["format"]) {
+            auto format = config["format"].as<string>();
+            if (format == "jpg") {
+                src_pattern_ += "jpg";
+                dst_pattern_ += "jpg"; 
+            } else if (format == "png") {
+                src_pattern_ += "png";
+                dst_pattern_ += "png"; 
+            } else {
+                src_pattern_ += "bmp";
+                dst_pattern_ += "bmp"; 
+            }
+        } else {
+            vert::logger->warn("format not provided, use default bmp");
+            src_pattern_ += "bmp";
+            dst_pattern_ += "bmp";
+        }
+
         config_.recycle_bin = config_.recycle_bin.lexically_normal();
         if (!fs::exists(config_.recycle_bin)) {
             fs::create_directories(config_.recycle_bin);
@@ -254,7 +272,7 @@ void vert::ImageWriter::loop_src()
         vert::logger->trace("Recv SRC ID: {} ({} x {})", meta.id, meta.width, meta.height);
 
         if (level_ == ONLY_SRC || level_ == BOTH) {
-            write(temp, meta); 
+            write(temp, meta, src_pattern_); 
         }
 
     }
@@ -275,14 +293,14 @@ void vert::ImageWriter::loop_dst()
         vert::logger->trace("Recv DST ID: {} ({} x {})", meta.id, meta.width, meta.height);
 
         if (level_ == ONLY_DST || level_ == BOTH) {
-            write(temp, meta); 
+            write(temp, meta, dst_pattern_); 
         }
     }
 }
 
-void vert::ImageWriter::write(const cv::Mat &img, const MatMeta &meta)
+void vert::ImageWriter::write(const cv::Mat &img, const MatMeta &meta, std::string_view pattern)
 {
-    std::string filename = fmt::format("{}_{:05d}_src.bmp", meta.device_id, meta.id);
+    std::string filename = fmt::format(pattern, meta.device_id, meta.id);
     auto full_path = current_.rotate_paths.back() / filename;
     vert::logger->trace("Writing image: {}", full_path.string());
 
