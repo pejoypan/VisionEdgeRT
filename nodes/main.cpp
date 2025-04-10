@@ -9,7 +9,7 @@
 #include "utils/logging.h"
 
 #include "basler_emulator.h"
-#include "camera.h"
+#include "camera_adapter.h"
 #include "image_writer.h"
 
 using namespace std;
@@ -143,17 +143,17 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-    vert::Camera abstract_camera(&context, image_format);
+    vert::CameraAdapter camera_adapter(&context, image_format);
 
     writer.start();
-    abstract_camera.start();
+    camera_adapter.start();
     camera_emu.start();
 
 
     cout << "Press Enter to stop grabbing..." << endl;
     cin.get();
     camera_emu.stop();
-    abstract_camera.stop();
+    camera_adapter.stop();
     writer.stop();
 
 

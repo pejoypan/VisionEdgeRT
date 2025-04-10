@@ -1,7 +1,7 @@
 #include <vector>
 #include <opencv2/imgproc.hpp>
 #include <opencv2/highgui.hpp>
-#include "camera.h"
+#include "camera_adapter.h"
 #include "../third_party/msgpack.hpp"
 #include "../third_party/zmq_addon.hpp"
 #include "../utils/pylon_utils.h"
@@ -13,7 +13,7 @@ using namespace std;
 #define WINDOW_NAME_SRC "recv src"
 // #define VERT_DEBUG_WINDOW
 
-vert::Camera::Camera(zmq::context_t *ctx, int _dst_type)
+vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx, int _dst_type)
     : publisher_(*ctx, zmq::socket_type::pub),
       subscriber_(*ctx, zmq::socket_type::sub),
       dst_type_(static_cast<Pylon::EPixelType>(_dst_type))
@@ -30,29 +30,29 @@ vert::Camera::Camera(zmq::context_t *ctx, int _dst_type)
         vert::logger->error("pylon converter doesn't support {}", vert::pixel_type_to_string(dst_type_));
     }
 
-    converter_.OutputOrientation = Pylon::OutputOrientation_TopDown;
+    converter_.OutputOrientation = Pylon::OutputOrientation_Unchanged;
     // converter_.OutputBitAlignment = Pylon::OutputBitAlignment_MsbAligned;
     converter_.MaxNumThreads = 1;
     // converter.MaxNumThreads.TrySetToMaximum();
     vert::logger->info("Abstract Camera Inited");
 }
 
-vert::Camera::~Camera()
+vert::CameraAdapter::~CameraAdapter()
 {
     stop();
 }
 
-void vert::Camera::start()
+void vert::CameraAdapter::start()
 {
     vert::logger->info("Starting...");
     if (!is_running_) {
         is_running_ = true;
-        loop_thread_ = std::thread(&Camera::loop, this);
+        loop_thread_ = std::thread(&CameraAdapter::loop, this);
         vert::logger->info("Started");
     }
 }
 
-void vert::Camera::stop()
+void vert::CameraAdapter::stop()
 {
     vert::logger->info("Stopping...");
     if (is_running_) {
@@ -67,12 +67,12 @@ void vert::Camera::stop()
 #endif
 }
 
-cv::Mat vert::Camera::get_curr_image() const
+cv::Mat vert::CameraAdapter::get_curr_image() const
 {
     return cv::Mat();
 }
 
-void vert::Camera::loop()
+void vert::CameraAdapter::loop()
 {
 #ifdef VERT_DEBUG_WINDOW
     cv::namedWindow(WINDOW_NAME_SRC, cv::WINDOW_AUTOSIZE | cv::WINDOW_KEEPRATIO | cv::WINDOW_GUI_EXPANDED);
@@ -89,7 +89,7 @@ void vert::Camera::loop()
     }
 }
 
-void vert::Camera::recv()
+void vert::CameraAdapter::recv()
 {
     vector<zmq::message_t> msgs;
     zmq::recv_result_t result = zmq::recv_multipart(subscriber_, std::back_inserter(msgs));
@@ -112,7 +112,7 @@ void vert::Camera::recv()
 
 }
 
-void vert::Camera::cv_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
+void vert::CameraAdapter::cv_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
     int src_cv_type = vert::pixel_type_to_cv_type(src_type);
     assert(src_cv_type != -1);
@@ -141,7 +141,7 @@ void vert::Camera::cv_convert(void *buffer, const vert::GrabMeta &meta, Pylon::E
 
 }
 
-void vert::Camera::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
+void vert::CameraAdapter::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
     if (converter_.ImageHasDestinationFormat(src_type, meta.padding_x, src_orientation_)) {
         int src_cv_type = vert::pixel_type_to_cv_type(src_type);
@@ -162,7 +162,7 @@ void vert::Camera::pylon_convert(void *buffer, const vert::GrabMeta &meta, Pylon
     }
 }
 
-void vert::Camera::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
+void vert::CameraAdapter::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPixelType src_type)
 {
     vert::logger->trace("{} ---convert--> {}", vert::pixel_type_to_string(src_type), vert::pixel_type_to_string(dst_type_));
 
@@ -173,13 +173,13 @@ void vert::Camera::convert(void *buffer, const vert::GrabMeta &meta, Pylon::EPix
     }
 }
 
-void vert::Camera::display()
+void vert::CameraAdapter::display()
 {
     cv::imshow(WINDOW_NAME, img_cvt_);
     cv::waitKey(1);
 }
 
-void vert::Camera::send()
+void vert::CameraAdapter::send()
 {
     auto meta_data = msgpack::pack(img_meta_);
     zmq::message_t meta_msg(meta_data.data(), meta_data.size());
@@ -192,7 +192,7 @@ void vert::Camera::send()
     vert::logger->trace("Publish: [meta {} bytes, image {} bytes]", meta_msg.size(), img_msg.size());
 }
 
-int vert::Camera::get_bayer_code(Pylon::EPixelType from) const
+int vert::CameraAdapter::get_bayer_code(Pylon::EPixelType from) const
 {
     switch (from)
     {
@@ -241,7 +241,7 @@ int vert::Camera::get_bayer_code(Pylon::EPixelType from) const
     }
 }
 
-bool vert::Camera::use_pylon_converter(Pylon::EPixelType from) const
+bool vert::CameraAdapter::use_pylon_converter(Pylon::EPixelType from) const
 {
     return !(
         Pylon::IsMonoImage(from) ||

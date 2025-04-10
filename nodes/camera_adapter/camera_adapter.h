@@ -1,5 +1,5 @@
-#ifndef _CAMERA_H_
-#define _CAMERA_H_
+#ifndef _CAMERA_ADAPTER_H_
+#define _CAMERA_ADAPTER_H_
 #include <opencv2/core.hpp>
 #include <atomic>
 #include <thread>
@@ -12,14 +12,13 @@
     TODO:
     - compare converter performance: pylon thread num, opencv VNG, opencv EdgeAware
     - mutex necessary? recv, get_curr_image, display, convert
-    - how to get EImageOrientation from camera?
     - use opencv bayer demosaicing color incorrect @ file mode
-    - need recv and send split to 2 threads?
+    - LATER: need recv and send split to 2 threads?
 */
 
 namespace vert {
 
-    class Camera
+    class CameraAdapter
     {
         enum DemosaicingFlag {
             Bilinear = 0,  // Using bilinear interpolation, fast but not good
@@ -28,8 +27,8 @@ namespace vert {
         };
 
     public:
-        Camera(zmq::context_t *ctx, int _dst_type);
-        ~Camera();
+        CameraAdapter(zmq::context_t *ctx, int _dst_type);
+        ~CameraAdapter();
 
         void start();
         void stop();
@@ -73,12 +72,14 @@ namespace vert {
         int CV_DEMOSAICING_FLAG_ = Bilinear;
 
         Pylon::EPixelType dst_type_ = Pylon::EPixelType::PixelType_Undefined;
-        Pylon::EImageOrientation src_orientation_ = Pylon::ImageOrientation_TopDown;
+        Pylon::EImageOrientation src_orientation_ = Pylon::ImageOrientation_TopDown; // we assume it's top down
 
         Pylon::CImageFormatConverter converter_;
         Pylon::CPylonImage pylon_image_;
+
+        std::string name_ = "CameraAdapter";
     };
 
 } // namespace vert
 
-#endif /* _CAMERA_H_ */
+#endif /* _CAMERA_ADAPTER_H_ */

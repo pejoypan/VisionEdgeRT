@@ -1,5 +1,5 @@
 add_subdirectory(utils)
-add_subdirectory(camera)
+add_subdirectory(camera_adapter)
 add_subdirectory(algo)
 add_subdirectory(basler_camera)
 add_subdirectory(basler_emulator)
@@ -16,7 +16,7 @@ target_link_libraries(VERT PRIVATE
     yaml-cpp::yaml-cpp
     vert_utils  
     basler_emulator
-    camera
+    camera_adapter
     image_writer
 )
 
