@@ -29,7 +29,7 @@ int main(int argc, char **argv) {
 
         image.create(1024, 1024, CV_8UC3);
         cv::randn(image, cv::Scalar(128, 128, 128), cv::Scalar(128, 128, 128));
-        vert::MatMeta meta{"cam", i, 1024, 1024, CV_8UC3, 0};
+        vert::MatMeta meta{"cam", (int64_t)i, 1024, 1024, CV_8UC3, 3, 0};
         
         auto meta_data = msgpack::pack(meta);
         zmq::message_t meta_msg(meta_data.data(), meta_data.size());

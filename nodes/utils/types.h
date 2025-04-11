@@ -28,11 +28,12 @@ namespace vert
         uint32_t height;
         uint32_t width;
         int cv_type;
+        uint8_t cn;
         uint64_t timestamp;
       
         template<class T>
         void pack(T &_pack) {
-            _pack(device_id, id, height, width, cv_type, timestamp);
+            _pack(device_id, id, height, width, cv_type, cn, timestamp);
         }
     };
 } 

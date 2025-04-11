@@ -25,7 +25,9 @@ camera_adapter:
   name: "CameraAdapter#0"
   port:
     from: "inproc://#1"
-    to: "inproc://#2"
+    to: 
+      - "inproc://#2"
+      - "tcp://127.0.0.1:5555"
   converter:
     use: pylon # pylon, opencv
     num_threads: 1 # for pylon converter only

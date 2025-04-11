@@ -56,9 +56,11 @@ bool vert::CameraAdapter::init(const YAML::Node &config)
             }
 
             if (config["port"]["to"]) {
-                string address = config["port"]["to"].as<string>();
-                publisher_.bind(address);
-                vert::logger->info("{} publisher bind to {}", name_, address);
+                auto address = config["port"]["to"].as<vector<string>>();
+                for (const auto& addr : address) {
+                    publisher_.bind(addr);
+                    vert::logger->info("{} publisher bind to {}", name_, addr);
+                }
             } else {
                 vert::logger->critical("Failed to init '{}'. Reason: port.to is empty", name_);
                 return false;
@@ -176,7 +178,7 @@ void vert::CameraAdapter::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
-    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, get_output_cv_type(src_type), meta.timestamp};
+    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, get_output_cv_type(src_type), get_output_cn(src_type), meta.timestamp};
 
     vert::logger->debug("Recv from Device: {} Image ID: {} Timestamp: {} ({} x {} {})", meta.device_id, meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
 
@@ -323,5 +325,17 @@ Pylon::EPixelType vert::CameraAdapter::get_output_pylon_type(Pylon::EPixelType f
         return Pylon::PixelType_BGR8packed; 
     } else {
         return Pylon::PixelType_Undefined;
+    }
+}
+
+uint8_t vert::CameraAdapter::get_output_cn(Pylon::EPixelType from) const
+{
+    if (Pylon::IsMonoImage(from)) {
+        return 1; 
+    } else if (Pylon::IsColorImage(from)) {
+        return 3; 
+    } else {
+        assert(false);
+        return -1;
     }
 }

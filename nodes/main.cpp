@@ -118,7 +118,7 @@ int main(int argc, char* argv[])
 
     Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
     
-    zmq::context_t context(0);
+    zmq::context_t context(1);
    
     vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
         vert::logger->info("\n{}", vert::get_device_info(device));

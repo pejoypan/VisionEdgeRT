@@ -72,6 +72,7 @@ namespace vert {
         int get_output_cv_type(Pylon::EPixelType from) const;
 
         Pylon::EPixelType get_output_pylon_type(Pylon::EPixelType from) const;
+        uint8_t get_output_cn(Pylon::EPixelType from) const;
 
         zmq::socket_t publisher_;
         zmq::socket_t subscriber_;
