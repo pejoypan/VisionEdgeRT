@@ -17,6 +17,7 @@ target_include_directories(vert_utils PRIVATE ${CMAKE_CURRENT_SOURCE_DIR})
 target_link_libraries(vert_utils PUBLIC 
     pylon::pylon
     spdlog::spdlog
+    libzmq
     $<$<BOOL:${MINGW}>:ws2_32>
     ${OpenCV_LIBS}
 )

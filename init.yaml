@@ -35,7 +35,7 @@ camera_adapter:
 
 image_writer:
   name: "ImageWriter#0"
-  level: both # off, only_src, only_dst, both
+  level: off # off, only_src, only_dst, both
   port:
     src: "inproc://#2"
     dst: "inproc://dst"

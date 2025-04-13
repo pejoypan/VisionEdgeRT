@@ -15,6 +15,8 @@
 
 using namespace std;
 
+static zmq::context_t context(2); // 1. send image to ui 2. send log to ui
+
 bool init_logger(const YAML::Node& config) {
 
     try {
@@ -58,6 +60,13 @@ bool init_logger(const YAML::Node& config) {
         } else {
             cerr << "Failed to init logging. Reason: file node is empty" << endl;
             return false;
+        }
+
+        {
+            auto zmq_sink = std::make_shared<vert::zmq_sink_mt>(&context, "tcp://127.0.0.1:5556"); // TODO: configurable
+            zmq_sink->set_level(spdlog::level::warn); // now is hard coded to warn
+            zmq_sink->set_pattern("[%Y-%m-%d %H:%M:%S.%e] [%l] [%t] %v");
+            sinks.push_back(zmq_sink);
         }
 
         // auto sink_list = spdlog::sinks_init_list{console_sink, file_sink};
@@ -117,8 +126,6 @@ int main(int argc, char* argv[])
 
 
     Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
-    
-    zmq::context_t context(1);
    
     vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
         vert::logger->info("\n{}", vert::get_device_info(device));
