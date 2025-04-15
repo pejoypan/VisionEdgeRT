@@ -13,11 +13,9 @@
 using namespace std;
 
 
-
 using namespace std::chrono;
 namespace fs = std::filesystem;
 
-vert::SimpleTimer timer("");
 
 vert::ImageWriter::ImageWriter(zmq::context_t *ctx)
     : src_subscriber_(*ctx, zmq::socket_type::sub),
