@@ -6,9 +6,10 @@ add_library(basler_camera SHARED
 target_include_directories(basler_camera PUBLIC ${CMAKE_CURRENT_SOURCE_DIR}) # let others directly include header files
 
 target_link_libraries(basler_camera PUBLIC
-    pylon::pylon
-    yaml-cpp::yaml-cpp
-    libzmq
+    # pylon::pylon
+    # yaml-cpp::yaml-cpp
+    # libzmq
+    basler_base
     vert_utils
 )
 

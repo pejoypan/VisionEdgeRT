@@ -1,6 +1,7 @@
 add_subdirectory(utils)
 add_subdirectory(camera_adapter)
 add_subdirectory(algo)
+add_subdirectory(basler_base)
 add_subdirectory(basler_camera)
 add_subdirectory(basler_emulator)
 add_subdirectory(image_writer)
