@@ -9,6 +9,7 @@
 #include "utils/logging.h"
 #include "utils/pylon_utils.h"
 
+#include "basler_camera.h"
 #include "basler_emulator.h"
 #include "camera_adapter.h"
 #include "image_writer.h"

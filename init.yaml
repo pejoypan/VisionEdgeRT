@@ -22,7 +22,13 @@ ui:
     num_cols: 3
     num_rows: 2
     spacing: 10
-    user_id: ["0", "1", "2", "3", "4"]
+    user_id: ["cam#0", "cam#1", "cam#2", "cam#3", "cam#4"]
+
+basler_camera:
+  name: "BaslerCamera#0"
+  port: "inproc://#1"
+  user_id: "cam#0"
+  sn: "40432454"
 
 basler_emulator:
   name: "BaslerEmulator#0"

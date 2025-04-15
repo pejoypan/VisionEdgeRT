@@ -15,6 +15,7 @@ target_link_libraries(VERT PRIVATE
     $<$<BOOL:${MINGW}>:ws2_32>
     yaml-cpp::yaml-cpp
     vert_utils  
+    basler_camera
     basler_emulator
     camera_adapter
     image_writer

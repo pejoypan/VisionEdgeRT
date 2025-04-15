@@ -10,6 +10,10 @@ function(install_runtime_dlls)
         "${PYLON_DLL_DIR}/PylonBase_v10.dll"
         "${PYLON_DLL_DIR}/PylonUtility_v10.dll"
         "${PYLON_DLL_DIR}/PylonCamEmu_v10_TL.dll"
+        "${PYLON_DLL_DIR}/PylonGigE_v10_TL.dll"
+        "${PYLON_DLL_DIR}/PylonUsb_v10_TL.dll"
+        "${PYLON_DLL_DIR}/uxapi_v14.dll"
+        "${PYLON_DLL_DIR}/gxapi_v15.dll"
     )
 
     file(GLOB ZeroMQ_DLLS "${ZeroMQ_DIR}/../../bin/*.dll")
