@@ -123,23 +123,23 @@ bool vert::CameraAdapter::init(const YAML::Node &config)
 
 void vert::CameraAdapter::start()
 {
-    vert::logger->info("Starting...");
+    vert::logger->info("{} starting...", name_);
     if (!is_running_) {
         is_running_ = true;
         loop_thread_ = std::thread(&CameraAdapter::loop, this);
-        vert::logger->info("Started");
+        vert::logger->info("{} started", name_);
     }
 }
 
 void vert::CameraAdapter::stop()
 {
-    vert::logger->info("Stopping...");
+    vert::logger->info("{} stopping...", name_);
     if (is_running_) {
         is_running_ = false;
         if (loop_thread_.joinable()) {
             loop_thread_.join();
         }
-        vert::logger->info("Stopped");
+        vert::logger->info("{} stopped", name_);
     }
 #ifdef VERT_DEBUG_WINDOW
     cv::destroyWindow(WINDOW_NAME);

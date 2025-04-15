@@ -129,13 +129,8 @@ namespace vert
     }
 
     inline std::string brief_info(const Pylon::CInstantCamera &camera) {
-        std::stringstream message;
-        auto& info = camera.GetDeviceInfo();
-        message << (info.IsModelNameAvailable() ? info.GetModelName() : "unknown")
-                << "(" << (info.IsSerialNumberAvailable()? info.GetSerialNumber() : "nan") << ")"
-                << "'" << (info.IsUserDefinedNameAvailable()? info.GetUserDefinedName() : "") << "'";
-        
-        return message.str();
+        const auto& info = camera.GetDeviceInfo();
+        return static_cast<std::string>(info.IsFriendlyNameAvailable()? info.GetFriendlyName().c_str() : "");
     }
 
     inline std::string get_device_info(const Pylon::CDeviceInfo &info) {
@@ -144,7 +139,7 @@ namespace vert
                 << "Vendor   : " << (info.IsVendorNameAvailable() ? info.GetVendorName() : "") << "\n"
                 << "Model    : " << (info.IsModelNameAvailable() ? info.GetModelName() : "") << "\n"
                 << "S/N      : " << (info.IsSerialNumberAvailable()? info.GetSerialNumber() : "") << "\n"
-                << "User ID  : " << (info.IsUserDefinedNameAvailable() ? info.GetUserDefinedName() : "") << "\n"
+                // << "User ID  : " << (info.IsUserDefinedNameAvailable() ? info.GetUserDefinedName() : "") << "\n"
                 << "====================\n";
 
         return message.str();

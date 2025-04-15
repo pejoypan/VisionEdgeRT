@@ -170,19 +170,19 @@ bool vert::ImageWriter::init(const YAML::Node &config)
 
 void vert::ImageWriter::start()
 {
-    vert::logger->info("Starting...");
+    vert::logger->info("{} starting...", name_);
     rotate();
     if (!is_running_) {
         is_running_ = true;
         src_thread_ = std::thread(&ImageWriter::loop_src, this);
         dst_thread_ = std::thread(&ImageWriter::loop_dst, this);
-        vert::logger->info("Started");
+        vert::logger->info("{} started", name_);
     }
 }
 
 void vert::ImageWriter::stop()
 {
-    vert::logger->info("Stopping...");
+    vert::logger->info("{} stopping...", name_);
     if (is_running_) {
         is_running_ = false;
         if (src_thread_.joinable()) {
@@ -191,7 +191,7 @@ void vert::ImageWriter::stop()
         if (dst_thread_.joinable()) {
             dst_thread_.join();
         }
-        vert::logger->info("Stopped");
+        vert::logger->info("{} stopped", name_);
     }
 }
 
