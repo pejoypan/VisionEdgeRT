@@ -33,7 +33,7 @@ basler_camera:
 basler_emulator:
   name: "BaslerEmulator#0"
   port: "inproc://#1"
-  user_id: 0
+  user_id: "cam#1"
   file_path: "D:/job_win/dev/dev_HPMVA/images/1"
   max_images: -1 # -1 means unlimited
   fps: 10.0
