@@ -1,4 +1,8 @@
 #include <iostream>
+#include <vector>
+#include <variant>
+#include <string>
+#include <memory>
 #include <pylon/PylonIncludes.h>
 #include <spdlog/spdlog.h>
 #include <yaml-cpp/yaml.h>
@@ -16,6 +20,78 @@
 
 using namespace std;
 
+namespace vert
+{
+    using node = std::variant<
+        vert::BaslerEmulator,
+        vert::BaslerCamera,
+        vert::CameraAdapter,
+        vert::ImageWriter>;
+    
+    bool create_nodes(zmq::context_t *context, const YAML::Node& config, std::vector<std::unique_ptr<vert::node>>& nodes) {
+
+        nodes.clear();
+
+        auto is_use = [&config](const string& key) {
+            if (config[key]) {
+                if (config[key]["is_use"])
+                    return config[key]["is_use"].as<bool>();
+                return true;
+            } else return false; 
+        };
+
+        if (is_use("basler_emulator") && is_use("basler_camera")) {
+            vert::logger->critical("basler_emulator & basler_camera both exists");
+            return false; 
+        }
+
+        // 1.A
+        if (is_use("basler_emulator")) {
+            auto emu = std::make_unique<vert::node>(std::in_place_type<vert::BaslerEmulator>, context);
+            if (!std::get<vert::BaslerEmulator>(*emu).init(config["basler_emulator"])) 
+                return false;
+            nodes.push_back(std::move(emu));
+        }
+        
+        // 1.B
+        if (is_use("basler_camera")) {
+            auto cam = std::make_unique<vert::node>(std::in_place_type<vert::BaslerCamera>, context);
+            if (!std::get<vert::BaslerCamera>(*cam).init(config["basler_camera"])) 
+                return false;
+            nodes.push_back(std::move(cam));
+        }
+        
+        // 2
+        if (is_use("camera_adapter")) {
+            auto adapter = std::make_unique<vert::node>(std::in_place_type<vert::CameraAdapter>, context);
+            if (!std::get<vert::CameraAdapter>(*adapter).init(config["camera_adapter"])) 
+                return false;
+            nodes.push_back(std::move(adapter));
+        }
+        
+        // 3.A
+        if (is_use("image_writer")) {
+            auto writer = std::make_unique<vert::node>(std::in_place_type<vert::ImageWriter>, context);
+            if (!std::get<vert::ImageWriter>(*writer).init(config["image_writer"])) 
+                return false;
+            nodes.push_back(std::move(writer));
+        }
+
+        // 3.B Algo
+
+        // 4 Result Handler
+    
+        if (nodes.empty()) {
+            vert::logger->critical("Failed to init any node");
+            return false;
+        }
+
+        vert::logger->info("{} nodes created", nodes.size());
+
+        return true;
+    }
+
+}
 static zmq::context_t context(2); // 1. send image to ui 2. send log to ui
 
 bool init_logger(const YAML::Node& config) {
@@ -132,32 +208,24 @@ int main(int argc, char* argv[])
         vert::logger->info("\n{}", vert::get_device_info(device));
     });
 
-    vert::BaslerEmulator camera_emu(&context);
-    if (!camera_emu.init(config["basler_emulator"])) {
+
+    std::vector<std::unique_ptr<vert::node>> nodes;
+    if (!vert::create_nodes(&context, config, nodes)) {
         return 1;
     }
 
-    vert::ImageWriter writer(&context);
-    if (!writer.init(config["image_writer"])) {
-        return 1;
+    // start
+    for (auto it = nodes.rbegin(); it != nodes.rend(); ++it) {
+        std::visit([](auto& n) { n.start(); }, **it);
     }
-
-    vert::CameraAdapter camera_adapter(&context);
-    if (!camera_adapter.init(config["camera_adapter"])) {
-        return 1;
-    }
-
-    writer.start();
-    camera_adapter.start();
-    camera_emu.start();
-
 
     cout << "Press Enter to stop grabbing..." << endl;
     cin.get();
-    camera_emu.stop();
-    camera_adapter.stop();
-    writer.stop();
 
+    // stop
+    for (auto& node : nodes) {
+        std::visit([](auto& n) { n.stop(); }, *node);
+    }
 
 
     return 0;
