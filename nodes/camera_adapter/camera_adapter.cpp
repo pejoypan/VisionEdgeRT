@@ -24,7 +24,8 @@ vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx)
 
 vert::CameraAdapter::~CameraAdapter()
 {
-    stop();
+    if (is_running())
+        stop();
 }
 
 bool vert::CameraAdapter::init(const YAML::Node &config)
@@ -48,6 +49,7 @@ bool vert::CameraAdapter::init(const YAML::Node &config)
             if (config["port"]["from"]) {
                 string address = config["port"]["from"].as<string>();
                 subscriber_.connect(address);
+                subscriber_.set(zmq::sockopt::rcvtimeo, 1000);
                 subscriber_.set(zmq::sockopt::subscribe, "");
                 vert::logger->info("{} subscriber connected to {}", name_, address);
             } else {
@@ -172,7 +174,9 @@ void vert::CameraAdapter::recv()
 {
     vector<zmq::message_t> msgs;
     zmq::recv_result_t result = zmq::recv_multipart(subscriber_, std::back_inserter(msgs));
-    assert(result && "recv failed");
+    if (!result)
+        return;    
+    // assert(result && "recv failed");
     assert(*result == 2);
 
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());

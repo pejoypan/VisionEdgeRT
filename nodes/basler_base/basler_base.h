@@ -72,11 +72,9 @@ public:
     bool is_grabbing() const { return camera_.IsGrabbing(); }
 
     void close() {
-        if (is_grabbing())
-            stop();
+        stop();
         m_ptrGrabResult.Release();
-        if (camera_.IsOpen())
-            camera_.Close();
+        camera_.DestroyDevice();
     }
     virtual void start() = 0;
 

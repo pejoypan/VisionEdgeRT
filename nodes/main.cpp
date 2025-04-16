@@ -201,8 +201,7 @@ int main(int argc, char* argv[])
         return 1;
     }
 
-
-    Pylon::PylonAutoInitTerm autoInitTerm;  // PylonInitialize() will be called now
+    Pylon::PylonInitialize();
    
     vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
         vert::logger->info("\n{}", vert::get_device_info(device));
@@ -227,6 +226,10 @@ int main(int argc, char* argv[])
         std::visit([](auto& n) { n.stop(); }, *node);
     }
 
+
+    Pylon::PylonTerminate();
+
+    vert::logger->info("**** VisionEdgeRT Terminated ****");
 
     return 0;
 }

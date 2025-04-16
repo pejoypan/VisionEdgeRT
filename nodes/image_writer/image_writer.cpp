@@ -25,7 +25,8 @@ vert::ImageWriter::ImageWriter(zmq::context_t *ctx)
 
 vert::ImageWriter::~ImageWriter()
 {
-    stop();
+    if (is_running())
+        stop();
 }
 
 bool vert::ImageWriter::init(const YAML::Node &config)
@@ -54,6 +55,7 @@ bool vert::ImageWriter::init(const YAML::Node &config)
                 string src_port = config["port"]["src"].as<string>();
                 vert::logger->info("src suscriber connecting to {} ...", src_port);
                 src_subscriber_.connect(src_port);
+                src_subscriber_.set(zmq::sockopt::rcvtimeo, 1000);
                 src_subscriber_.set(zmq::sockopt::subscribe, "");
             } else if (level_ == ONLY_SRC || level_ == BOTH) {
                 vert::logger->error("level is {} but src port not provided", (int)level_);
@@ -63,6 +65,7 @@ bool vert::ImageWriter::init(const YAML::Node &config)
                 string dst_port = config["port"]["dst"].as<string>();
                 vert::logger->info("dst suscriber connecting to {}...", dst_port);
                 dst_subscriber_.connect(dst_port);
+                dst_subscriber_.set(zmq::sockopt::rcvtimeo, 1000);
                 dst_subscriber_.set(zmq::sockopt::subscribe, "");
             } else if (level_ == ONLY_DST || level_ == BOTH) {
                 vert::logger->error("level is {} but dst port not provided", (int)level_);
@@ -260,7 +263,9 @@ void vert::ImageWriter::loop_src()
     while (is_running_) {
         vector<zmq::message_t> msgs;
         zmq::recv_result_t result = zmq::recv_multipart(src_subscriber_, std::back_inserter(msgs));
-        assert(result && "recv failed");
+        if (!result)
+            continue;
+        // assert(result && "recv failed");
         assert(*result == 2);
 
         auto meta = msgpack::unpack<vert::MatMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
@@ -281,7 +286,9 @@ void vert::ImageWriter::loop_dst()
     while (is_running_) {
         vector<zmq::message_t> msgs;
         zmq::recv_result_t result = zmq::recv_multipart(dst_subscriber_, std::back_inserter(msgs));
-        assert(result && "recv failed");
+        if (!result)
+            continue;
+        // assert(result && "recv failed");
         assert(*result == 2);
     
         auto meta = msgpack::unpack<vert::MatMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());

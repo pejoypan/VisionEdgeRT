@@ -12,18 +12,6 @@ logging: # trace, debug, info, warn, error, critical
     max_size: 100 # MB
     max_num: 5
 
-ui:
-  size: [1920, 1080]
-  image_port: "tcp://127.0.0.1:5555"
-  # log_port: "tcp://127.0.0.1:5556"
-  frame_window:
-    size_hint: [512, 512]
-    scale_hint: 0.5
-    num_cols: 3
-    num_rows: 2
-    spacing: 10
-    user_id: ["cam#0", "cam#1", "cam#2", "cam#3", "cam#4"]
-
 basler_camera:
   name: "BaslerCamera#0"
   port: "inproc://#1"
