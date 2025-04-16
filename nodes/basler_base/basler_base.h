@@ -13,7 +13,9 @@
 
 namespace vert {
     
-class BaslerBase : public Pylon::CImageEventHandler {
+class BaslerBase : public Pylon::CImageEventHandler, 
+                   public Pylon::CConfigurationEventHandler
+{
 public:
     BaslerBase(zmq::context_t *ctx)
         : publisher_(*ctx, zmq::socket_type::pub)
@@ -83,6 +85,10 @@ public:
     }
 
     virtual void OnImageGrabbed(Pylon::CInstantCamera & _camera, const Pylon::CGrabResultPtr &ptr) override {
+        if (!ptr->GrabSucceeded()) {
+            error_count_++;
+            return; 
+        }
         std::string user_id = camera_.DeviceUserID.GetValue();
         int64_t frame_id = ptr->GetID();
         uint32_t width = ptr->GetWidth();
@@ -101,6 +107,7 @@ public:
                                                       width,
                                                       (int)pixel_type,
                                                       timestamp,
+                                                      error_count_,
                                                       ptr->GetPaddingX(),
                                                       bufsize});
     
@@ -120,6 +127,18 @@ public:
     
     }
 
+    virtual void OnImagesSkipped(Pylon::CInstantCamera & _camera, size_t countOfSkippedImages) override {
+        error_count_ += countOfSkippedImages;
+    }
+
+    virtual void OnGrabStart(Pylon::CInstantCamera & _camera) override {
+        error_count_ = 0; 
+    }
+
+    virtual void OnGrabError(Pylon::CInstantCamera & _camera, const char* errmsg) override {
+        error_count_ += 1;
+    }
+
     std::string name_;
 
 protected:
@@ -127,6 +146,8 @@ protected:
     Pylon::CGrabResultPtr m_ptrGrabResult;
     zmq::socket_t publisher_;
     std::string user_id_;
+
+    size_t error_count_ = 0;
 
     virtual bool device_specific_init(const YAML::Node& config) = 0;
 

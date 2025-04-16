@@ -13,12 +13,13 @@ namespace vert
         uint32_t width;
         int pixel_type;
         uint64_t timestamp;
+        size_t error_cnt;
         uint32_t padding_x;
         size_t buffer_size;
       
         template<class T>
         void pack(T &_pack) {
-            _pack(device_id, id, height, width, pixel_type, timestamp, padding_x, buffer_size);
+            _pack(device_id, id, height, width, pixel_type, timestamp, error_cnt, padding_x, buffer_size);
         }
     };
 
@@ -30,10 +31,11 @@ namespace vert
         int cv_type;
         uint8_t cn;
         uint64_t timestamp;
+        size_t error_cnt;
       
         template<class T>
         void pack(T &_pack) {
-            _pack(device_id, id, height, width, cv_type, cn, timestamp);
+            _pack(device_id, id, height, width, cv_type, cn, timestamp, error_cnt);
         }
     };
 } 

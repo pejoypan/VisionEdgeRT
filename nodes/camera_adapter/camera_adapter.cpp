@@ -178,9 +178,9 @@ void vert::CameraAdapter::recv()
     auto meta = msgpack::unpack<vert::GrabMeta>(static_cast<const uint8_t *>(msgs[0].data()), msgs[0].size());
     auto src_type = static_cast<Pylon::EPixelType>(meta.pixel_type);
 
-    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, get_output_cv_type(src_type), get_output_cn(src_type), meta.timestamp};
+    img_meta_ = MatMeta{meta.device_id, meta.id, meta.height, meta.width, get_output_cv_type(src_type), get_output_cn(src_type), meta.timestamp, meta.error_cnt};
 
-    vert::logger->debug("Recv from Device: {} Image ID: {} Timestamp: {} ({} x {} {})", meta.device_id, meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type));
+    vert::logger->debug("Recv from Device: {} Image ID: {} Timestamp: {} ({} x {} {}) Error: {}", meta.device_id, meta.id, meta.timestamp, meta.width, meta.height, vert::pixel_type_to_string(src_type), meta.error_cnt);
 
 #ifdef VERT_DEBUG_WINDOW
     cv::Mat temp = cv::Mat(meta.height, meta.width, vert::pixel_type_to_cv_type(src_type), msgs[1].data()).clone();
@@ -273,7 +273,7 @@ void vert::CameraAdapter::send()
     img_msg.rebuild(img_cvt_.data ,img_cvt_.total() * img_cvt_.elemSize());
     publisher_.send(img_msg, zmq::send_flags::dontwait);
 
-    vert::logger->debug("Send Image Device_ID: {} ID: {} Size: {}x{} Type: {}", img_meta_.device_id, img_meta_.id, img_meta_.width, img_meta_.height, vert::cv_type_to_str(img_meta_.cv_type));
+    vert::logger->debug("Send Image Device_ID: {} ID: {} Size: {}x{} Type: {} Timestamp: {} Error: {}", img_meta_.device_id, img_meta_.id, img_meta_.width, img_meta_.height, vert::cv_type_to_str(img_meta_.cv_type), img_meta_.timestamp, img_meta_.error_cnt);
 }
 
 int vert::CameraAdapter::get_bayer_code(Pylon::EPixelType from) const

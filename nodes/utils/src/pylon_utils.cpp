@@ -99,7 +99,7 @@ void Pylon::ImageEvents::OnImageGrabbed(CInstantCamera &camera, const CGrabResul
     }
     else
     {
-        vert::logger->error("Error: {0:x} {}", ptrGrabResult->GetErrorCode(), ptrGrabResult->GetErrorDescription().c_str());
+        vert::logger->error("Error: {:x} {}", ptrGrabResult->GetErrorCode(), ptrGrabResult->GetErrorDescription().c_str());
     }
 }
 

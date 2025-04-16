@@ -100,6 +100,10 @@ bool vert::BaslerEmulator::device_specific_init(const YAML::Node &config)
         
         camera_.AcquisitionMode.SetValue(AcquisitionMode_Continuous);
 
+        // ** Force Failed Buffer (only for test)**
+        // camera_.ForceFailedBufferCount.SetValue(10);
+        // camera_.ForceFailedBuffer.Execute();
+
         if (!set_image_filename(cfg_.file_path))
             return false;
 
