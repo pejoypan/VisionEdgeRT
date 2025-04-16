@@ -19,6 +19,7 @@ basler_camera:
   sn: "40432454"
 
 basler_emulator:
+  is_use: false
   name: "BaslerEmulator#0"
   port: "inproc://#1"
   user_id: "cam#1"
@@ -31,9 +32,8 @@ camera_adapter:
   name: "CameraAdapter#0"
   port:
     from: "inproc://#1"
-    to: 
-      - "inproc://#2"
-      - "tcp://127.0.0.1:5555"
+    to_ui: "tcp://127.0.0.1:5555"
+    to_node: "inproc://#2"
   converter:
     use: pylon # pylon, opencv
     num_threads: 1 # for pylon converter only

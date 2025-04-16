@@ -16,7 +16,7 @@ using namespace std;
 
 vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx)
     : publisher_(*ctx, zmq::socket_type::pub),
-      subscriber_(*ctx, zmq::socket_type::sub)
+      subscriber_(*ctx, zmq::socket_type::sub) // TODO: change to pull
 {
     converter_.OutputOrientation = Pylon::OutputOrientation_Unchanged;
     converter_.MaxNumThreads = 1;
@@ -57,14 +57,23 @@ bool vert::CameraAdapter::init(const YAML::Node &config)
                 return false;
             }
 
-            if (config["port"]["to"]) {
-                auto address = config["port"]["to"].as<vector<string>>();
-                for (const auto& addr : address) {
-                    publisher_.bind(addr);
-                    vert::logger->info("{} publisher bind to {}", name_, addr);
-                }
+            if (config["port"]["to_ui"]) {
+                string address = config["port"]["to_ui"].as<string>();
+                publisher_.connect(address);
+                // publisher_.set(zmq::sockopt::sndhwm, 10);      // limited watermark
+                vert::logger->info("{} publisher connected to {}", name_, address);
             } else {
-                vert::logger->critical("Failed to init '{}'. Reason: port.to is empty", name_);
+                vert::logger->critical("Failed to init '{}'. Reason: port.to_ui is empty", name_); // TODO: temp return false
+                return false;
+            }
+
+            if (config["port"]["to_node"]) {
+                string address = config["port"]["to_node"].as<string>();
+                publisher_.bind(address);
+                // publisher_.set(zmq::sockopt::sndhwm, 100);      // high warermark
+                vert::logger->info("{} publisher bound to {}", name_, address);
+            } else {
+                vert::logger->critical("Failed to init '{}'. Reason: port.to_node is empty", name_);
                 return false;
             }
 

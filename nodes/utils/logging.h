@@ -37,7 +37,7 @@ public:
     zmq_sink(zmq::context_t* ctx, const std::string& endpoint)
         : socket_(*ctx, zmq::socket_type::push), stop_flag_(false)
     {
-        socket_.bind(endpoint);
+        socket_.connect(endpoint);
         sender_thread_ = std::thread(&zmq_sink::sender_loop, this);
     }
 
