@@ -16,7 +16,7 @@ using namespace std;
 
 vert::CameraAdapter::CameraAdapter(zmq::context_t *ctx)
     : publisher_(*ctx, zmq::socket_type::pub),
-      subscriber_(*ctx, zmq::socket_type::sub) // TODO: change to pull
+      subscriber_(*ctx, zmq::socket_type::pull)
 {
     converter_.OutputOrientation = Pylon::OutputOrientation_Unchanged;
     converter_.MaxNumThreads = 1;
@@ -48,9 +48,8 @@ bool vert::CameraAdapter::init(const YAML::Node &config)
 
             if (config["port"]["from"]) {
                 string address = config["port"]["from"].as<string>();
-                subscriber_.connect(address);
+                subscriber_.bind(address);
                 subscriber_.set(zmq::sockopt::rcvtimeo, 1000);
-                subscriber_.set(zmq::sockopt::subscribe, "");
                 vert::logger->info("{} subscriber connected to {}", name_, address);
             } else {
                 vert::logger->critical("Failed to init '{}'. Reason: port.from is empty", name_);

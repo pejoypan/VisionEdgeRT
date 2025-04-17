@@ -18,7 +18,7 @@ class BaslerBase : public Pylon::CImageEventHandler,
 {
 public:
     BaslerBase(zmq::context_t *ctx)
-        : publisher_(*ctx, zmq::socket_type::pub)
+        : publisher_(*ctx, zmq::socket_type::push)
     {
         camera_.RegisterImageEventHandler(this, Pylon::RegistrationMode_ReplaceAll, Pylon::Cleanup_None);
     }
@@ -43,7 +43,7 @@ public:
     
             if (config["port"]) {
                 auto addr = config["port"].as<std::string>();
-                publisher_.bind(addr);
+                publisher_.connect(addr);
                 vert::logger->info("{} bound to {}", name_, addr);
             } else {
                 vert::logger->critical("Failed to init '{}'. Reason: port is empty", name_);
