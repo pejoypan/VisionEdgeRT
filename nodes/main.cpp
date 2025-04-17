@@ -17,6 +17,7 @@
 #include "basler_emulator.h"
 #include "camera_adapter.h"
 #include "image_writer.h"
+#include "image_processor.h"
 
 using namespace std;
 
@@ -26,7 +27,8 @@ namespace vert
         vert::BaslerEmulator,
         vert::BaslerCamera,
         vert::CameraAdapter,
-        vert::ImageWriter>;
+        vert::ImageWriter,
+        vert::ImageProcessor>;
     
     bool create_nodes(zmq::context_t *context, const YAML::Node& config, std::vector<std::unique_ptr<vert::node>>& nodes) {
 
@@ -40,12 +42,20 @@ namespace vert
             } else return false; 
         };
 
-        if (is_use("basler_emulator") && is_use("basler_camera")) {
-            vert::logger->critical("basler_emulator & basler_camera both exists");
-            return false; 
+        // 1
+        if (is_use("camera_adapter")) {
+            auto adapter = std::make_unique<vert::node>(std::in_place_type<vert::CameraAdapter>, context);
+            if (!std::get<vert::CameraAdapter>(*adapter).init(config["camera_adapter"])) 
+                return false;
+            nodes.push_back(std::move(adapter));
         }
 
-        // 1.A
+        // if (is_use("basler_emulator") && is_use("basler_camera")) {
+        //     vert::logger->critical("basler_emulator & basler_camera both exists");
+        //     return false; 
+        // }
+
+        // 2.A
         if (is_use("basler_emulator")) {
             auto emu = std::make_unique<vert::node>(std::in_place_type<vert::BaslerEmulator>, context);
             if (!std::get<vert::BaslerEmulator>(*emu).init(config["basler_emulator"])) 
@@ -53,20 +63,12 @@ namespace vert
             nodes.push_back(std::move(emu));
         }
         
-        // 1.B
+        // 2.B
         if (is_use("basler_camera")) {
             auto cam = std::make_unique<vert::node>(std::in_place_type<vert::BaslerCamera>, context);
             if (!std::get<vert::BaslerCamera>(*cam).init(config["basler_camera"])) 
                 return false;
             nodes.push_back(std::move(cam));
-        }
-        
-        // 2
-        if (is_use("camera_adapter")) {
-            auto adapter = std::make_unique<vert::node>(std::in_place_type<vert::CameraAdapter>, context);
-            if (!std::get<vert::CameraAdapter>(*adapter).init(config["camera_adapter"])) 
-                return false;
-            nodes.push_back(std::move(adapter));
         }
         
         // 3.A
@@ -78,6 +80,12 @@ namespace vert
         }
 
         // 3.B Algo
+        if (is_use("image_processor")) {
+            auto processor = std::make_unique<vert::node>(std::in_place_type<vert::ImageProcessor>, context);
+            if (!std::get<vert::ImageProcessor>(*processor).init(config["image_processor"])) 
+                return false;
+            nodes.push_back(std::move(processor));
+        }
 
         // 4 Result Handler
     
