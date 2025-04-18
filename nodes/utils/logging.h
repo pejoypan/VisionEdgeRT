@@ -7,10 +7,13 @@
 #include <queue>
 #include <thread>
 #include <string>
+#include <string_view>
 #include <spdlog/logger.h>
 #include <spdlog/sinks/base_sink.h>
 #include "../third_party/zmq.hpp"
 #include "../third_party/fmt/format.h"
+#include "types.h"
+#include "cv_utils.h"
 
 
 
@@ -99,6 +102,17 @@ private:
 using zmq_sink_mt = zmq_sink<std::mutex>;
 using zmq_sink_st = zmq_sink<spdlog::details::null_mutex>;
 
+inline void log_mat(const MatMeta& meta, std::string_view action) 
+{
+    logger->debug("{} Mat ID: {} Timestamp: {} ({} x {} {}) Error: {}",
+                  action,
+                  meta.id,
+                  meta.timestamp,
+                  meta.width,
+                  meta.height,
+                  vert::cv_type_to_str(meta.cv_type),
+                  meta.error_cnt);
+}
 
 }
 

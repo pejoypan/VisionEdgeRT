@@ -52,3 +52,9 @@ image_writer:
   max_images: 99999 # per rotate
   max_disk_usage: 100 # GB
 
+image_processor:
+  name: "ImageProcessor#0"
+  port:
+    from: "inproc://#2"
+  num_workers: 5
+
