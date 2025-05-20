@@ -1,6 +1,6 @@
 # High Performance Machine Vision Architecture
 
-[architecture](assets/architecture.png)
+![architecture](assets/architecture.png)
 
 ## How to Build
 
