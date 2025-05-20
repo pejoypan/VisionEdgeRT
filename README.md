@@ -1,5 +1,7 @@
 # High Performance Machine Vision Architecture
 
+[architecture](assets/architecture.png)
+
 ## How to Build
 
 In administrative cmd:
@@ -18,13 +20,30 @@ cmake --build . --config release
 | Enable Testing | VERT_ENABLE_TEST |
 
 
+## How to Install
+
+In powershell prompt:
+```powershell
+cd build
+cmake --install .
+```
+
+## How to Pack
+
+use CPack
+TODO:
 
 ## How to Run
 
-In powershell prompt
+In powershell prompt:
 ```powershell
-cmake --install .
-set_local_path.ps1
 cd CMAKE_INSTALL_PREFIX
-./VERT.exe
+./VERT.exe -c <init.yaml>
 ```
+> The default install directory is C:/VisionEdgeRT/bin
+
+### Run Options
+
+| Features     | Options                 |
+| -------- | -------------------- |
+| specify init yaml | -c,--config <init.yaml> |
