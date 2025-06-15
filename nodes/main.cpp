@@ -210,15 +210,18 @@ int main(int argc, char* argv[])
 
     Pylon::PylonInitialize();
    
-    vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
-        vert::logger->info("\n{}", vert::get_device_info(device));
-    });
+    // vert::enumerate_devices([](const Pylon::CDeviceInfo& device) {
+    //     vert::logger->info("\n{}", vert::get_device_info(device));
+    // });
 
 
     std::vector<std::unique_ptr<vert::node>> nodes;
     if (!vert::create_nodes(&context, config, nodes)) {
         return 1;
     }
+
+    cout << "Press Enter to start ..." << endl;
+    cin.get();
 
     // start
     for (auto it = nodes.rbegin(); it != nodes.rend(); ++it) {
